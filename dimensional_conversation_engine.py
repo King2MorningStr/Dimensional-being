@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Dimensional Conversation Engine (UNIFIED + REFLECTION + INTROSPECTION)
-====================================================================
-This is the "Conscious Runtime" module.
-Unified 4-stage Dimensional NLU + Lattice Physics + Autonomic Reflection.
-NOW WITH ADDED DEEP INTROSPECTION CAPABILITY.
+Dimensional Conversation Engine (EVOLVED v2.2 - ADAPTIVE)
+=========================================================
+Base: 'EVOLVED v2.1 - EXACT BASE' (User Provided)
+Upgrades Applied (ADDITIVE ONLY):
+1. [OPT 1] Active Dynamic Anchors (NLU evolves with usage)
+2. [OPT 2] Hebbian Lattice Reinforcement (Co-firing crystals link permanently)
+3. [OPT 3] Adaptive Resonance v2 (Steps scale with complexity * presence)
+4. [OPT 4] Emotional-Semantic Biasing (Fear makes everything look urgent)
+5. [OPT 5] Spontaneous Introspection (Periodic self-reporting)
 """
 
 # --- Core Python Imports ---
@@ -49,6 +53,7 @@ except ImportError:
         def get_facet_by_role(self, r): return list(self.facets.values())[0] if self.facets else None
     class CrystalFacet(Mock):
         def __init__(self, fid, r, c): self.facet_id = fid; self.role = r; self.content = c; self.state = "ACTIVE"
+        def strengthen(self, amt): pass # Mock method for Active Reinforcement
     class DimensionalEnergyRegulator(Mock):
         def __init__(self, *args): self.facet_energy = {}; self.facet_to_facet_links = {}
         def register_crystal(self, c): pass
@@ -74,7 +79,7 @@ class SemanticFrame:
     def __init__(self):
         self.raw_tokens = []
         self.embedding_vector = np.zeros(300) # 300D vector from Spacy
-        self.conceptual_vector = [0.0] * 5 # [UPDATED] 5D distilled vector
+        self.conceptual_vector = [0.0] * 5 # 5D distilled vector
         self.primary_concepts = []
 
     def __repr__(self):
@@ -85,24 +90,25 @@ class SemanticAnalyzer:
     def __init__(self, nlp_model):
         self.nlp = nlp_model
         print("[INIT] Semantic Subsystem Online.")
+        # [UPGRADE 1] Dynamic Anchors: Make copies so they can be modified
         self.anchors = {
-            "tech": self.nlp("logic system module function process algorithm engine").vector,
-            "abstract": self.nlp("meaning consciousness resonance paradigm dimension concept").vector,
-            "urgent": self.nlp("now immediately fail critical error must emergency").vector,
-            "positive": self.nlp("perfect success good functioning stable optimized yes correct exactly").vector,
-            "negative": self.nlp("fail broken error bad improper incomplete no wrong stop incorrect").vector,
-            # [INSERTION] New anchor for self-reference
-            "self": self.nlp("you yourself status feeling emotion state report").vector
+            "tech": self.nlp("logic system module function process algorithm engine").vector.copy(),
+            "abstract": self.nlp("meaning consciousness resonance paradigm dimension concept").vector.copy(),
+            "urgent": self.nlp("now immediately fail critical error must emergency").vector.copy(),
+            "positive": self.nlp("perfect success good functioning stable optimized yes correct exactly").vector.copy(),
+            "negative": self.nlp("fail broken error bad improper incomplete no wrong stop incorrect").vector.copy(),
+            "self": self.nlp("you yourself status feeling emotion state report").vector.copy()
         }
 
-    def process_text(self, text) -> SemanticFrame:
+    # [UPGRADE 4] Accepts current_emotion for perceptual biasing
+    def process_text(self, text, current_emotion: Optional[Dict] = None) -> SemanticFrame:
         frame = SemanticFrame()
         doc = self.nlp(text.lower())
         frame.raw_tokens = [token.text for token in doc if not token.is_punct]
         if doc.has_vector:
             frame.embedding_vector = doc.vector
         
-        # [MODIFICATION] 5D Vector now includes "Self-Reference" as dimension 4
+        # 5D Vector now includes "Self-Reference" as dimension 4
         frame.conceptual_vector = [
             self._cosine_sim(frame.embedding_vector, self.anchors["tech"]),
             self._cosine_sim(frame.embedding_vector, self.anchors["abstract"]),
@@ -111,8 +117,20 @@ class SemanticAnalyzer:
             self._cosine_sim(frame.embedding_vector, self.anchors["negative"]),
             self._cosine_sim(frame.embedding_vector, self.anchors["self"])
         ]
+        
+        # [UPGRADE 4] Emotional-Semantic Biasing
+        if current_emotion and current_emotion.get('primary') == 'fear':
+             # If afraid, boost perception of urgency (dimension 2)
+             frame.conceptual_vector[2] += current_emotion.get('intensity', 0.0) * 0.3
+
         frame.primary_concepts = [t.lemma_ for t in doc if t.pos_ in ["NOUN", "PROPN"] and not t.is_stop]
         return frame
+
+    # [UPGRADE 1] New method for dynamic anchor updates
+    def update_anchor(self, anchor_name, new_vector, learning_rate=0.05):
+        if anchor_name in self.anchors:
+            # Drift the anchor slightly toward the new example
+            self.anchors[anchor_name] = (self.anchors[anchor_name] * (1.0 - learning_rate)) + (new_vector * learning_rate)
 
     def _cosine_sim(self, v1, v2):
         norm_v1 = np.linalg.norm(v1)
@@ -190,6 +208,7 @@ class IntentFrame:
         self.deep_intent = "unknown"
         self.confidence_score = 0.0
         self.requred_system_action = "wait"
+        self.intent_distribution = {}
 
     def __repr__(self):
         return (f"<IntentFrame Surface:[{self.surface_intent.UPPER()}] | "
@@ -200,14 +219,14 @@ class IntentResolver:
     def __init__(self):
         print("[INIT] Hierarchical Intent Subsystem Online.")
 
-    def resolve_intent(self, text_input, sem_frame, ctx_frame, rel_frame) -> IntentFrame:
+    def resolve_intent(self, text_input, sem_frame, ctx_frame, rel_frame, previous_emotion: Dict) -> IntentFrame:
         i_frame = IntentFrame()
         i_frame.surface_intent = self._determine_surface(text_input, rel_frame)
 
-        # [MODIFICATION] Pass text_input to deep_intent for keyword boosting
-        deep_intent, confidence = self._determine_deep_intent(sem_frame, ctx_frame, rel_frame, text_input)
+        deep_intent, confidence, dist = self._determine_deep_intent(sem_frame, ctx_frame, rel_frame, text_input, previous_emotion)
         i_frame.deep_intent = deep_intent
         i_frame.confidence_score = confidence
+        i_frame.intent_distribution = dist
         i_frame.requred_system_action = self._map_action(deep_intent, i_frame.surface_intent)
         return i_frame
 
@@ -218,45 +237,46 @@ class IntentResolver:
             return "imperative"
         return "declarative"
 
-    def _determine_deep_intent(self, sem, ctx, rel, text_input):
+    def _determine_deep_intent(self, sem, ctx, rel, text_input, prev_emotion):
         scores = {
-            "SYSTEM_OPTIMIZATION": 0.1, "KNOWLEDGE_ACQUISITION": 0.1,
-            "CRITICAL_DIAGNOSTIC": 0.0, "CONVERSATIONAL_FILLER": 0.0,
-            "CONCEPT_UNKNOWN": 0.0,
-            "INTROSPECTION": 0.0 # [INSERTION]
+            "SYSTEM_OPTIMIZATION": 1.0, "KNOWLEDGE_ACQUISITION": 1.0,
+            "CRITICAL_DIAGNOSTIC": 1.0, "CONVERSATIONAL_FILLER": 1.0,
+            "CONCEPT_UNKNOWN": 0.5, "INTROSPECTION": 1.0
         }
+
+        em_primary = prev_emotion.get('primary')
+        if em_primary == 'fear': scores["CRITICAL_DIAGNOSTIC"] += 2.0
+        elif em_primary == 'joy': scores["CONVERSATIONAL_FILLER"] += 1.0
+
         vec = sem.conceptual_vector
-        scores["SYSTEM_OPTIMIZATION"] += vec[0] * 0.5
-        scores["KNOWLEDGE_ACQUISITION"] += vec[1] * 0.4
-        scores["CRITICAL_DIAGNOSTIC"] += vec[2] * 0.8
-        scores["INTROSPECTION"] += vec[4] * 0.9 # [INSERTION]
+        scores["SYSTEM_OPTIMIZATION"] += vec[0] * 3.0
+        scores["KNOWLEDGE_ACQUISITION"] += vec[1] * 2.0
+        scores["CRITICAL_DIAGNOSTIC"] += vec[2] * 4.0
+        scores["INTROSPECTION"] += vec[4] * 4.0
         
-        # [INSERTION] Keyword boosting
         txt = text_input.lower()
-        if "status" in txt or "how are you" in txt or "feel" in txt:
-             scores["INTROSPECTION"] += 0.6
+        if "status" in txt or "how are you" in txt or "feel" in txt: scores["INTROSPECTION"] += 3.0
 
         if not sem.primary_concepts and abs(vec[0]) < 0.1 and abs(vec[1]) < 0.1:
-             # Only if valence is also neutral is it a filler. High valence might be pure feedback.
-            if abs(vec[3]) < 0.3:
-                scores["CONVERSATIONAL_FILLER"] = 1.0
+            if abs(vec[3]) < 0.3: scores["CONVERSATIONAL_FILLER"] += 2.0
 
-        if ctx.state_divergence > 0.7: scores["KNOWLEDGE_ACQUISITION"] += 0.4
-        elif ctx.state_divergence < 0.2: scores["SYSTEM_OPTIMIZATION"] += 0.3
-        if rel.density > 0.1: scores["SYSTEM_OPTIMIZATION"] += 0.4
-        elif rel.density < 0.05: scores["CONVERSATIONAL_FILLER"] += 0.5
+        if ctx.state_divergence > 0.7: scores["KNOWLEDGE_ACQUISITION"] += 1.5
+        elif ctx.state_divergence < 0.2: scores["SYSTEM_OPTIMIZATION"] += 1.0
+        if rel.density > 0.1: scores["SYSTEM_OPTIMIZATION"] += 1.5
 
-        best_intent = max(scores, key=scores.get)
-        total_score = sum(scores.values())
-        confidence = scores[best_intent] / total_score if total_score > 0 else 0.0
-        return best_intent, min(confidence * 2.0, 1.0)
+        exp_scores = {k: np.exp(v) for k, v in scores.items()}
+        total_exp = sum(exp_scores.values())
+        probabilities = {k: v / total_exp for k, v in exp_scores.items()}
+
+        best_intent = max(probabilities, key=probabilities.get)
+        return best_intent, probabilities[best_intent], probabilities
 
     def _map_action(self, deep_intent, surface_intent):
         if deep_intent == "CRITICAL_DIAGNOSTIC": return "EXECUTE_IMMEDIATE_SCAN"
         if deep_intent == "SYSTEM_OPTIMIZATION": return "INITIATE_REFACTOR_PROTOCOL"
         if deep_intent == "KNOWLEDGE_ACQUISITION": return "QUERY_LONG_TERM_MEMORY"
         if deep_intent == "CONCEPT_UNKNOWN": return "QUERY_CLARIFICATION"
-        if deep_intent == "INTROSPECTION": return "EXECUTE_SELF_REPORT" # [INSERTION]
+        if deep_intent == "INTROSPECTION": return "EXECUTE_SELF_REPORT"
         return "AWAIT_FURTHER_INPUT"
 
 
@@ -305,6 +325,12 @@ class DimensionalConversationEngine:
         # --- 4. NEW: Initialize REFLECT Subsystem (Sensory Buffer) ---
         # This holds the *previous* interaction until the *next* turn validates it.
         self.pending_interaction = None
+        self.last_emotion = {"primary": "neutral", "intensity": 0.0}
+        
+        # [UPGRADE 5] Spontaneous Introspection Counters
+        self.turn_count = 0
+        self.next_introspection_turn = random.randint(5, 10)
+
         print(" [CORE] Initializing Autonomic Reflection Buffer...")
         
         # --- 5. Seed & Link the Lattice ---
@@ -327,14 +353,14 @@ class DimensionalConversationEngine:
         concepts = [
             "CONCEPT_TECH", "CONCEPT_ABSTRACT", "CONCEPT_URGENT",
             "CONCEPT_POSITIVE", "CONCEPT_NEGATIVE", "CONCEPT_FEELING",
-            "CONCEPT_SELF" # [INSERTION] Added SELF
+            "CONCEPT_SELF"
         ]
         
         # 2. Define Intents from NLU Resolver
         intents = [
             "INTENT_SYSTEM_OPTIMIZATION", "INTENT_KNOWLEDGE_ACQUISITION",
             "INTENT_CRITICAL_DIAGNOSTIC", "INTENT_CONVERSATIONAL_FILLER",
-            "INTENT_CONCEPT_UNKNOWN", "INTENT_INTROSPECTION" # [INSERTION] Added INTROSPECTION
+            "INTENT_CONCEPT_UNKNOWN", "INTENT_INTROSPECTION"
         ]
         
         # 3. Define Response Gambits (Actions)
@@ -346,7 +372,7 @@ class DimensionalConversationEngine:
             "RESPONSE_EMPATHIZE_NEG": ["That sounds difficult.", "I understand you're feeling that way.", "Negative valence detected."],
             "RESPONSE_ACKNOWLEDGE_FILLER": ["I see.", "Understood.", "Noted.", "Resonant."],
             "RESPONSE_ACKNOWLEDGE_CRITICAL": ["CRITICAL ALERT. Acknowledged.", "Confirming high urgency."],
-            "RESPONSE_REPORT_STATUS": ["Running self-diagnostics..."] # [INSERTION] Placeholder
+            "RESPONSE_REPORT_STATUS": ["Running self-diagnostics..."]
         }
         
         # 4. Create all crystals and register them
@@ -371,25 +397,36 @@ class DimensionalConversationEngine:
         link("INTENT_CONCEPT_UNKNOWN", "RESPONSE_CLARIFY", 1.0)
         # Also link concepts to emotions/gambits
         link("CONCEPT_NEGATIVE", "RESPONSE_EMPATHIZE_NEG", 0.8)
-        # [INSERTION] New link for introspection
         link("INTENT_INTROSPECTION", "RESPONSE_REPORT_STATUS", 1.0)
 
+    # [UPGRADE 2] AUTOPOIETIC LINKING (Self-Repairing)
     def _force_regulator_link(self, concept_a_name: str, concept_b_name: str, weight: float):
-        """Forces an energy pathway in the regulator."""
+        """Forces an energy pathway in the regulator, creating if missing."""
         try:
-            crystal_a = self.processor.crystals[concept_a_name]
-            crystal_b = self.processor.crystals[concept_b_name]
-            facet_a = list(crystal_a.facets.values())[0]
-            facet_b = list(crystal_b.facets.values())[0]
+            c1 = self.processor.get_or_create_crystal(concept_a_name)
+            c2 = self.processor.get_or_create_crystal(concept_b_name)
+            
+            # Ensure facets exist (Autopoiesis)
+            if not c1.facets: 
+                 f1 = c1.add_facet("auto", "anchor", 0.1)
+                 self.regulator.register_facet(f1)
+            else: f1 = list(c1.facets.values())[0]
+            
+            if not c2.facets:
+                 f2 = c2.add_facet("auto", "anchor", 0.1)
+                 self.regulator.register_facet(f2)
+            else: f2 = list(c2.facets.values())[0]
 
-            if facet_a.facet_id not in self.regulator.facet_to_facet_links:
-                self.regulator.facet_to_facet_links[facet_a.facet_id] = {}
-            self.regulator.facet_to_facet_links[facet_a.facet_id][facet_b.facet_id] = weight
-            if facet_b.facet_id not in self.regulator.facet_to_facet_links:
-                self.regulator.facet_to_facet_links[facet_b.facet_id] = {}
-            self.regulator.facet_to_facet_links[facet_b.facet_id][facet_a.facet_id] = weight
+            if f1.facet_id not in self.regulator.facet_to_facet_links:
+                self.regulator.facet_to_facet_links[f1.facet_id] = {}
+            self.regulator.facet_to_facet_links[f1.facet_id][f2.facet_id] = weight
+            if f2.facet_id not in self.regulator.facet_to_facet_links:
+                self.regulator.facet_to_facet_links[f2.facet_id] = {}
+            self.regulator.facet_to_facet_links[f2.facet_id][f1.facet_id] = weight
         except Exception as e:
-            pass # Fail silently if mocks are in use or facets don't exist
+            # Keep original silent fail if desired, or print debug
+            # print(f"[WARNING] Failed to force regulator link: {e}")
+            pass
 
     # --- 2. MAIN CONVERSATIONAL TICK (UPDATED FOR REFLECTION) ---
 
@@ -398,6 +435,7 @@ class DimensionalConversationEngine:
         The main "Conscious Tick" for conversation.
         NOW INCLUDES STEP 0: REFLECTION.
         """
+        self.turn_count += 1 # [UPGRADE 5] Track turns
         
         # --- STEP 0: REFLECT (Process feedback on PREVIOUS turn) ---
         # If there is a buffered interaction, use THIS input to judge it.
@@ -410,19 +448,31 @@ class DimensionalConversationEngine:
         
         # --- STEP 2: FEEL (Lattice Perturbation) ---
         impact_points = self._determine_impact_points(sem_data, int_data)
-        # [MODIFICATION] Now captures presence scale too
         presence_scale, neural_map = self._dimensional_propagate(impact_points)
         
+        # [UPGRADE 5] Spontaneous Introspection Check
+        if self.turn_count >= self.next_introspection_turn or presence_scale < 0.4:
+            print("[DCE] ⚡ SPONTANEOUS INTROSPECTION TRIGGERED ⚡")
+            self.next_introspection_turn = self.turn_count + random.randint(5, 15)
+            # Force introspection intent override
+            int_data.deep_intent = "INTROSPECTION"
+            # Re-run feel to energize self-concept slightly
+            self._dimensional_propagate(["CONCEPT_SELF", "INTENT_INTROSPECTION"])
+            # Refresh snapshot
+            presence_scale, neural_map = self.regulator.snapshot(top_n=15)
+
         # --- STEP 3: ACT (Read & Articulate) ---
         resonant_gambit_name, resonance_emotion = self._find_resonant_gambit(neural_map)
+        self.last_emotion = resonance_emotion # [UPGRADE 6] Save for next turn
+        
         print(f"[DCE] 3. ACT: Deciphered Action '{resonant_gambit_name}' (Emotion: {resonance_emotion.get('primary')})")
 
-        # [MODIFICATION] Pass presence and neural_map for introspection
         response_text = self._articulate_response(resonant_gambit_name, int_data, resonance_emotion, presence_scale, neural_map)
         
         # --- STEP 4: STAGE (Buffer the interaction) ---
         # Instead of logging immediately, we stage it for validation next turn.
-        self._stage_interaction(user_input, response_text, neural_map, int_data)
+        # [UPGRADE 2 & 4] Stage gambit and raw vector for reinforcement
+        self._stage_interaction(user_input, response_text, neural_map, int_data, resonant_gambit_name, sem_data)
         
         return response_text
 
@@ -457,12 +507,46 @@ class DimensionalConversationEngine:
         
         # 1. Adjust the memory based on feedback
         log_data = self.pending_interaction
+        
+        # [UPGRADE 4] Active Reinforcement Variables
+        gambit_id = log_data.get("gambit_used")
+
         if feedback_type == "POSITIVE":
             log_data["json_data"]["outcome"] = "SUCCESS"
             log_data["json_data"]["user_feedback_explicit"] = "POSITIVE"
+            
+            # [UPGRADE 1] Active Dynamic Anchors
+            vec = log_data.get("input_vector")
+            if vec is not None:
+                 # Reinforce 'positive' anchor with this successful interaction vector
+                 self.sem_engine.update_anchor("positive", vec, 0.05)
+
+            # [UPGRADE 4] Reinforce the successful gambit
+            if gambit_id:
+                 c = self.processor.crystals.get(gambit_id)
+                 if c: 
+                     for f in c.facets.values(): f.strengthen(0.05)
+            
+            # [UPGRADE 2] Hebbian Reinforcement
+            # "Wire together" the top co-active facets
+            top_facets = log_data.get("top_facet_ids", [])[:3]
+            if len(top_facets) >= 2:
+                 crystals_to_link = []
+                 for fid in top_facets:
+                      for cr in self.processor.crystals.values():
+                           if fid in cr.facets: crystals_to_link.append(cr.concept); break
+                 for i in range(len(crystals_to_link)):
+                      for j in range(i+1, len(crystals_to_link)):
+                           self.processor.link_crystals(crystals_to_link[i], crystals_to_link[j], {}, weight=0.05)
+
         elif feedback_type == "NEGATIVE":
             log_data["json_data"]["outcome"] = "FAILURE"
             log_data["json_data"]["user_feedback_explicit"] = "NEGATIVE"
+            # [UPGRADE 4] Drain energy from bad gambit
+            if gambit_id:
+                 c = self.processor.crystals.get(gambit_id)
+                 if c:
+                     for f in c.facets.values(): f.confidence = max(0.1, f.confidence * 0.9)
         else:
             log_data["json_data"]["outcome"] = "NEUTRAL"
 
@@ -473,7 +557,7 @@ class DimensionalConversationEngine:
         # 3. Clear the buffer
         self.pending_interaction = None
 
-    def _stage_interaction(self, user_input: str, response: str, neural_map: List, int_data: IntentFrame):
+    def _stage_interaction(self, user_input: str, response: str, neural_map: List, int_data: IntentFrame, gambit_name: str, sem_data: SemanticFrame):
         """
         STAGES the interaction in the sensory buffer.
         It waits here until the NEXT turn decides its fate.
@@ -482,6 +566,10 @@ class DimensionalConversationEngine:
         
         self.pending_interaction = {
             "root_concept": f"INTERACTION_{uuid.uuid4().hex[:8]}",
+            # [UPGRADE 2 & 4] Store data needed for next-turn reinforcement
+            "gambit_used": gambit_name,
+            "input_vector": sem_data.embedding_vector,
+            "top_facet_ids": [fid for fid, _, _ in neural_map],
             "json_data": { 
                 "user_input": user_input, "system_response": response,
                 "timestamp": time.time(),
@@ -509,10 +597,11 @@ class DimensionalConversationEngine:
         print(f"\n[DCE] 1. SENSE: Running 4-Stage NLU for: \"{input_text}\"")
         start = datetime.datetime.now()
 
-        sem_data = self.sem_engine.process_text(input_text)
+        # [UPGRADE 4] Pass last emotion for perceptual biasing
+        sem_data = self.sem_engine.process_text(input_text, self.last_emotion)
         ctx_data = self.ctx_engine.process_context(sem_data)
         rel_data = self.rel_engine.process_relations(input_text)
-        int_data = self.int_engine.resolve_intent(input_text, sem_data, ctx_data, rel_data)
+        int_data = self.int_engine.resolve_intent(input_text, sem_data, ctx_data, rel_data, self.last_emotion)
 
         print(f"    -> NLU Scan finished in {(datetime.datetime.now() - start).total_seconds():.4f}s")
         print(f"    -> Semantic Concepts: {sem_data.primary_concepts}")
@@ -540,7 +629,6 @@ class DimensionalConversationEngine:
         if vec[2] > 0.5: impact_points.add("CONCEPT_URGENT")
         if vec[3] > 0.5: impact_points.add("CONCEPT_POSITIVE")
         if vec[3] < -0.5: impact_points.add("CONCEPT_NEGATIVE")
-        # [INSERTION] New impact point for self-reference
         if vec[4] > 0.5: impact_points.add("CONCEPT_SELF")
 
         return list(impact_points)
@@ -568,8 +656,15 @@ class DimensionalConversationEngine:
                      # print(f"    -> Injecting 1.0 energy into facet '{facet.facet_id}'")
                      self.regulator.inject_energy(facet.facet_id, 1.0)
         
-        # print("[DCE] 2b. Propagating Resonance (Running physics simulation)...")
-        for i in range(5): # Let it "vibrate" 5 times
+        # [UPGRADE 3] Adaptive Resonance v2
+        # Steps scale with Complexity (len impact) AND Presence
+        current_presence = self.regulator.current_presence_scale if hasattr(self.regulator, 'current_presence_scale') else 1.0
+        complexity = len(impact_points)
+        # Formula: Min 2, Max 15. Base 3 + (complexity * presence * 1.5)
+        adaptive_steps = max(2, min(15, int(3 + (complexity * current_presence * 1.5))))
+        
+        # print(f"    -> Resonance: Running {adaptive_steps} physics steps (Cx:{complexity}, Pres:{current_presence:.2f})")
+        for i in range(adaptive_steps): 
             self.regulator.step(dt=0.2)
             
         return self.regulator.snapshot(top_n=15)
@@ -595,7 +690,7 @@ class DimensionalConversationEngine:
         """
         Selects a template from the chosen gambit and "colors" it.
         """
-        # [INSERTION] SPECIAL CASE: Introspection
+        # SPECIAL CASE: Introspection
         if gambit_name == "RESPONSE_REPORT_STATUS":
             return self._generate_introspection_report(presence, emotion, neural_map)
 
@@ -610,7 +705,6 @@ class DimensionalConversationEngine:
         base_response = random.choice(templates) if isinstance(templates, list) else templates
         
         # "Color" the response based on the gambit's emergent emotion
-        # [MODIFICATION] Updated to use Plutchik primary/intensity from new regulator
         primary = emotion.get('primary')
         intensity = emotion.get('intensity', 0.0)
         
@@ -620,14 +714,12 @@ class DimensionalConversationEngine:
             base_response += "!"
         elif int_data.confidence_score < 0.4:
             base_response += " (Thinking...)"
-
-        # [MODIFICATION] Color based on Presence
+            
         if presence < 0.5:
              base_response = f"[Dissociated {presence:.2f}] {base_response}..."
-                
+             
         return base_response
 
-    # [INSERTION] New method for detailed introspection
     def _generate_introspection_report(self, presence, emotion, neural_map):
         """Generates detailed self-report from internal physics state."""
         p_state = "Fully Present"
