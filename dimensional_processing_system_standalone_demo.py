@@ -73,14 +73,17 @@ class CrystalFacet:
     frequency: float = field(default_factory=lambda: random.uniform(0, 1))
     
     def strengthen(self, amount: float = 0.1):
-        """Strengthen this facet through use"""
+        """Strengthen this facet through use with interdependent physics updates"""
         self.confidence = min(1.0, self.confidence + amount)
         self.access_count += 1
         self.last_accessed = time.time()
         self.state = FacetState.ACTIVE # Use brings it back from decay
+        
+        # Apply facet interdependence: strengthening affects physics points
+        self._update_interdependent_physics(boost=True)
     
     def decay(self, rate: float = 0.01):
-        """Natural decay over time (Ghost Relic system)"""
+        """Natural decay over time (Ghost Relic system) with interdependent physics"""
         if self.state == FacetState.RELIC:
             return # Already a relic
 
@@ -88,12 +91,37 @@ class CrystalFacet:
         decay_amount = rate * (time_since_access / 60.0)
         self.confidence = max(0.0, self.confidence - decay_amount)
         
+        # Apply interdependent physics decay
+        self._update_interdependent_physics(boost=False)
+        
         # --- PERFECTION: Non-destructive state change ---
         if self.confidence < 0.3:
             self.state = FacetState.DECAYING
         if self.confidence < 0.1:
             self.state = FacetState.RELIC
             # The 'role' is preserved forever
+    
+    def _update_interdependent_physics(self, boost: bool):
+        """
+        Facet physics points influence each other:
+        - High coherence boosts stability
+        - High complexity reduces abstractness temporarily  
+        - High potential increases resonance
+        """
+        if boost:
+            # Strengthening creates positive feedback loops
+            if self.coherence > 0.7:
+                self.stability = min(1.0, self.stability + 0.05)
+            if self.potential > 0.7:
+                self.resonance = min(1.0, self.resonance + 0.05)
+            if self.complexity > 0.8:
+                self.abstractness = max(0.0, self.abstractness - 0.03)
+        else:
+            # Decay creates negative feedback
+            if self.stability < 0.3:
+                self.coherence = max(0.0, self.coherence - 0.03)
+            if self.complexity > 0.7:
+                self.frequency = max(0.0, self.frequency - 0.02)
 
     def get_facet_points(self) -> Dict[str, float]:
         """Helper to get all 8 points"""
@@ -149,23 +177,41 @@ class Crystal:
                 return facet
         return None
 
-    def check_evolution_criteria(self) -> bool:
-        """Check if crystal can evolve to next level"""
+    def check_evolution_criteria(self, context_data: Optional[Dict[str, Any]] = None) -> bool:
+        """
+        Check if crystal can evolve to next level with adaptive contextual criteria.
+        High-impact scenarios accelerate evolution.
+        """
         # --- PERFECTION: Count only *external* facets for evolution ---
         external_facets = [f for f in self.facets.values() if not f.role.startswith("INTERNAL_LAW")]
         
+        # Contextual modifiers
+        impact_multiplier = 1.0
+        if context_data:
+            # High-threat situations accelerate evolution
+            if context_data.get('threat_level', 0) > 0.8:
+                impact_multiplier = 1.5
+            # Repeated stress events accelerate
+            if context_data.get('stress_count', 0) > 3:
+                impact_multiplier = 1.3
+            # Novel patterns accelerate
+            if context_data.get('is_novel_pattern', False):
+                impact_multiplier = 1.2
+        
+        effective_usage = self.usage_count * impact_multiplier
+        
         if self.level == CrystalLevel.BASE:
-            # Evolve to COMPOSITE: 3+ facets, 10+ uses
-            return len(external_facets) >= 3 and self.usage_count >= 10
+            # Evolve to COMPOSITE: 3+ facets, 10+ uses (or less with high impact)
+            return len(external_facets) >= 3 and effective_usage >= 10
         
         elif self.level == CrystalLevel.COMPOSITE:
             # Evolve to FULL_CONCEPT: 5+ facets, 25+ uses
-            return len(external_facets) >= 5 and self.usage_count >= 25
+            return len(external_facets) >= 5 and effective_usage >= 25
         
         elif self.level == CrystalLevel.FULL_CONCEPT:
-            # --- PERFECTION: Your 8-facet QUASI rule ---
-            # Evolve to QUASI: 8+ external facets, 50+ uses
-            return len(external_facets) >= 8 and self.usage_count >= 50
+            # --- PERFECTION: Your 8-facet QUASI rule with adaptive threshold ---
+            # Evolve to QUASI: 8+ external facets, 50+ uses (accelerated under stress)
+            return len(external_facets) >= 8 and effective_usage >= 50
         
         return False
     
@@ -315,6 +361,14 @@ class CrystalMemorySystem:
         self.total_evolutions = 0
         self.level_counts = {level: 0 for level in CrystalLevel}
         self.pathway_history = defaultdict(int)
+        
+        # --- NEW: Pattern Recognition System ---
+        self.recurring_patterns: Dict[str, int] = {}  # Pattern signature -> count
+        self.abstracted_concepts: Dict[str, List[str]] = {}  # Abstract concept -> source concepts
+        
+        # --- NEW: Meta-Crystal Coordination ---
+        self.meta_crystals: Dict[str, 'MetaCrystal'] = {}  # Executive coordinators
+        self.enable_meta_coordination = True
     
     def get_or_create_crystal(self, concept: str, initial_content: Any = None) -> Crystal:
         """Get existing crystal or create new one"""
@@ -390,6 +444,122 @@ class CrystalMemorySystem:
         for crystal in self.crystals.values():
             for facet in crystal.facets.values():
                 facet.decay(rate=0.005)
+        
+        # Pattern recognition pass after decay
+        if len(self.crystals) > 10:  # Only if enough data
+            self._detect_recurring_patterns()
+    
+    def _detect_recurring_patterns(self):
+        """
+        Automatically identify recurring patterns across linked concepts
+        and create abstracted facets for generalized knowledge.
+        """
+        # Analyze connection patterns
+        connection_signatures = defaultdict(list)
+        
+        for crystal in self.crystals.values():
+            if len(crystal.connections) >= 2:
+                # Create signature from connected concepts
+                connected_concepts = sorted([
+                    self.crystals[cid].concept for cid in crystal.connections.keys()
+                    if cid in self.crystals
+                ])
+                
+                if len(connected_concepts) >= 2:
+                    signature = tuple(connected_concepts[:3])  # Use top 3 connections
+                    connection_signatures[signature].append(crystal.concept)
+        
+        # Find recurring patterns (same signature used by multiple crystals)
+        for signature, concepts in connection_signatures.items():
+            if len(concepts) >= 3:  # Pattern must appear 3+ times
+                pattern_key = "_".join(signature)
+                self.recurring_patterns[pattern_key] = len(concepts)
+                
+                # Create abstracted concept if not exists
+                if pattern_key not in self.abstracted_concepts:
+                    self._create_abstracted_concept(pattern_key, concepts, signature)
+    
+    def _create_abstracted_concept(self, pattern_key: str, source_concepts: List[str], signature: Tuple):
+        """Create generalized concept from recurring pattern"""
+        abstract_name = f"ABSTRACT_{pattern_key[:30]}"
+        
+        # Check if already exists
+        if any(c.concept == abstract_name for c in self.crystals.values()):
+            return
+        
+        abstract_crystal = self.get_or_create_crystal(abstract_name)
+        
+        # Add abstracted facet combining knowledge from sources
+        abstract_facet = abstract_crystal.add_facet(
+            "abstraction",
+            f"Generalized pattern from {len(source_concepts)} instances",
+            confidence=0.8
+        )
+        
+        # Link abstract concept to all sources
+        for source in source_concepts:
+            self.link_crystals(abstract_name, source, {"is_abstraction": True}, weight=0.3)
+        
+        self.abstracted_concepts[pattern_key] = source_concepts
+        print(f"[PATTERN] Created abstracted concept: {abstract_name}")
+    
+    def create_meta_crystal(self, domain: str, managed_crystals: List[str]) -> 'MetaCrystal':
+        """
+        Create a meta-crystal to coordinate decisions across multiple QUASI crystals.
+        Acts as executive function for a domain.
+        """
+        meta_id = f"META_{domain}"
+        
+        if meta_id in self.meta_crystals:
+            return self.meta_crystals[meta_id]
+        
+        meta = MetaCrystal(meta_id, domain, managed_crystals)
+        self.meta_crystals[meta_id] = meta
+        print(f"[META] Created meta-crystal '{meta_id}' managing {len(managed_crystals)} crystals")
+        return meta
+    
+    def coordinate_multi_crystal_decision(self, crystals: List[Crystal], data: Dict) -> Dict[str, Any]:
+        """
+        Allow multiple crystals to jointly govern complex inputs,
+        producing consensus outcomes.
+        """
+        if not crystals:
+            return {"decision": "no_consensus", "confidence": 0.0}
+        
+        # Collect individual crystal decisions
+        decisions = []
+        for crystal in crystals:
+            if crystal.level == CrystalLevel.QUASI:
+                decision = crystal.apply_internal_governance(data)
+                decisions.append({
+                    "crystal": crystal.concept,
+                    "law": decision["law"],
+                    "outcome": decision["outcome"],
+                    "energy": decision.get("energy_change", 0)
+                })
+        
+        if not decisions:
+            return {"decision": "no_quasi_crystals", "confidence": 0.0}
+        
+        # Consensus via majority vote on outcome
+        outcome_votes = defaultdict(int)
+        for d in decisions:
+            outcome_votes[d["outcome"]] += 1
+        
+        consensus_outcome = max(outcome_votes, key=outcome_votes.get)
+        confidence = outcome_votes[consensus_outcome] / len(decisions)
+        
+        # Average energy change from consensus decisions
+        consensus_energy = sum(
+            d["energy"] for d in decisions if d["outcome"] == consensus_outcome
+        ) / max(1, outcome_votes[consensus_outcome])
+        
+        return {
+            "decision": consensus_outcome,
+            "confidence": confidence,
+            "energy_change": consensus_energy,
+            "participating_crystals": [d["crystal"] for d in decisions]
+        }
 
     def get_memory_stats(self) -> Dict[str, Any]:
         return {
@@ -399,7 +569,76 @@ class CrystalMemorySystem:
             'level_distribution': {
                 level.name: count for level, count in self.level_counts.items()
             },
-            'top_pathway': max(self.pathway_history.items(), key=lambda x: x[1], default=("None", 0))
+            'top_pathway': max(self.pathway_history.items(), key=lambda x: x[1], default=("None", 0)),
+            'recurring_patterns': len(self.recurring_patterns),
+            'abstracted_concepts': len(self.abstracted_concepts),
+            'meta_crystals': len(self.meta_crystals)
+        }
+
+# ============================================================================
+# 2.5. META-CRYSTAL COORDINATION SYSTEM
+# ============================================================================
+
+@dataclass
+class MetaCrystal:
+    """
+    Executive coordinator that monitors multiple QUASI crystals
+    and coordinates decisions across them.
+    """
+    meta_id: str
+    domain: str
+    managed_crystal_ids: List[str] = field(default_factory=list)
+    coordination_history: List[Dict] = field(default_factory=list)
+    
+    def add_managed_crystal(self, crystal_id: str):
+        """Add a QUASI crystal to management"""
+        if crystal_id not in self.managed_crystal_ids:
+            self.managed_crystal_ids.append(crystal_id)
+    
+    def coordinate_decision(self, crystal_decisions: List[Dict]) -> Dict[str, Any]:
+        """
+        Meta-level decision coordination across managed crystals.
+        Resolves conflicts and produces unified action.
+        """
+        if not crystal_decisions:
+            return {"action": "wait", "confidence": 0.0}
+        
+        # Priority matrix: Energy > Consciousness > Governance
+        priority_map = {
+            "QUASI_ENERGY": 3,
+            "QUASI_CONSCIOUSNESS": 2,
+            "QUASI_GOVERNANCE": 1,
+            "QUASI_COLLISION": 2,
+            "QUASI_CHAOS": 0  # Chaos is deprioritized
+        }
+        
+        # Score each decision
+        scored_decisions = []
+        for decision in crystal_decisions:
+            priority = priority_map.get(decision.get("law", ""), 1)
+            outcome_score = 1.0 if decision.get("outcome") == "positive" else 0.5
+            final_score = priority * outcome_score
+            scored_decisions.append((final_score, decision))
+        
+        # Select highest scoring decision
+        best_decision = max(scored_decisions, key=lambda x: x[0])[1]
+        
+        # Record coordination
+        self.coordination_history.append({
+            "timestamp": time.time(),
+            "options_considered": len(crystal_decisions),
+            "chosen_law": best_decision.get("law"),
+            "outcome": best_decision.get("outcome")
+        })
+        
+        if len(self.coordination_history) > 100:
+            self.coordination_history.pop(0)
+        
+        return {
+            "action": best_decision.get("law", "wait"),
+            "outcome": best_decision.get("outcome", "neutral"),
+            "energy_change": best_decision.get("energy_change", 0.0),
+            "confidence": scored_decisions[0][0] / 3.0  # Normalize to 0-1
         }
 
 # ============================================================================
