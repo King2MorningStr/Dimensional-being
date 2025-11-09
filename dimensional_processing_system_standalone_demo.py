@@ -26,7 +26,8 @@ from typing import Dict, List, Optional, Any, Tuple, Set, ForwardRef
 from dataclasses import dataclass, field
 from collections import defaultdict
 from enum import Enum
-
+from concurrent.futures import ThreadPoolExecutor  # ADD THIS LINE
+from collections import defaultdict
 # --- PERFECTION: Added ForwardRef for 'Crystal' type hint ---
 CrystalRef = ForwardRef('Crystal')
 
@@ -440,44 +441,68 @@ class CrystalMemorySystem:
         self.pathway_history[tuple(sorted((concept1, concept2)))] += 1
         
     def decay_all(self):
-        """Apply decay to all crystals and facets"""
+        """DIMENSIONAL: Apply decay to all facets in parallel"""
+        from concurrent.futures import ThreadPoolExecutor
+    
+        # Collect ALL facets from ALL crystals
+        all_facets = []
         for crystal in self.crystals.values():
-            for facet in crystal.facets.values():
-                facet.decay(rate=0.005)
-        
-        # Pattern recognition pass after decay
-        if len(self.crystals) > 10:  # Only if enough data
+            all_facets.extend(crystal.facets.values())
+    
+        # DIMENSIONAL BATCH DECAY: All facets decay simultaneously   ← INDENT THESE
+    def decay_facet(facet):                                     
+        facet.decay(rate=0.005)                               
+            with
+               ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(decay_facet, all_facets))
+    
+        # Pattern detection pass
+        if len(self.crystals) > 10:
             self._detect_recurring_patterns()
     
     def _detect_recurring_patterns(self):
-        """
-        Automatically identify recurring patterns across linked concepts
-        and create abstracted facets for generalized knowledge.
-        """
-        # Analyze connection patterns
-        connection_signatures = defaultdict(list)
+    """
+    DIMENSIONAL: Analyze ALL crystal patterns in parallel.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from collections import defaultdict
+    
+    def analyze_crystal(crystal):
+        """Analyze a single crystal (runs in parallel)"""
+        if len(crystal.connections) < 2:
+            return None
         
-        for crystal in self.crystals.values():
-            if len(crystal.connections) >= 2:
-                # Create signature from connected concepts
-                connected_concepts = sorted([
-                    self.crystals[cid].concept for cid in crystal.connections.keys()
-                    if cid in self.crystals
-                ])
-                
-                if len(connected_concepts) >= 2:
-                    signature = tuple(connected_concepts[:3])  # Use top 3 connections
-                    connection_signatures[signature].append(crystal.concept)
+        connected_concepts = sorted([
+            self.crystals[cid].concept for cid in crystal.connections.keys()
+            if cid in self.crystals
+        ])
         
-        # Find recurring patterns (same signature used by multiple crystals)
-        for signature, concepts in connection_signatures.items():
-            if len(concepts) >= 3:  # Pattern must appear 3+ times
-                pattern_key = "_".join(signature)
-                self.recurring_patterns[pattern_key] = len(concepts)
-                
-                # Create abstracted concept if not exists
-                if pattern_key not in self.abstracted_concepts:
-                    self._create_abstracted_concept(pattern_key, concepts, signature)
+        if len(connected_concepts) >= 2:
+            signature = tuple(connected_concepts[:3])
+            return (signature, crystal.concept)
+        return None
+    
+    # DIMENSIONAL PARALLEL ANALYSIS: All crystals analyzed simultaneously
+    connection_signatures = defaultdict(list)
+    
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(analyze_crystal, self.crystals.values()))
+    
+    # Aggregate results
+    for result in results:
+        if result:
+            sig, concept = result
+            connection_signatures[sig].append(concept)
+    
+    # Find recurring patterns (same signature used by multiple crystals)
+    for signature, concepts in connection_signatures.items():
+        if len(concepts) >= 3:  # Pattern must appear 3+ times
+            pattern_key = "_".join(signature)
+            self.recurring_patterns[pattern_key] = len(concepts)
+            
+            # Create abstracted concept if not exists
+            if pattern_key not in self.abstracted_concepts:
+                self._create_abstracted_concept(pattern_key, concepts, signature)
     
     def _create_abstracted_concept(self, pattern_key: str, source_concepts: List[str], signature: Tuple):
         """Create generalized concept from recurring pattern"""
@@ -871,5 +896,4 @@ if __name__ == "__main__":
     print("  🎉🎉🎉 PERFECTION COMPLETE 🎉🎉🎉")
     print("  QUASI evolution, internal laws, and recursion logic is working.")
     print("="*70)
-}
 

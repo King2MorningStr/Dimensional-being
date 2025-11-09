@@ -18,8 +18,9 @@ import random
 import math
 import datetime
 import re
+import asyncio  # ADD THIS LINE
 from typing import Dict, List, Any, Tuple, Optional
-
+from concurrent.futures import ThreadPoolExecutor  # ADD THIS LINE
 # --- Dimensional NLU Imports ---
 import spacy
 import numpy as np
@@ -327,16 +328,11 @@ class DimensionalConversationEngine:
         self.pending_interaction = None
         self.last_emotion = {"primary": "neutral", "intensity": 0.0}
         
-        # --- NEW: Multi-Turn Intent Chaining ---
-        self.intent_chain: List[str] = []  # Rolling window of recent intents
-        self.intent_transition_map: Dict[Tuple[str, str], int] = {}  # Tracks intent sequences
-        self.pre_energized_crystals: Dict[str, float] = {}  # Crystals boosted by chain prediction
-        
         # [UPGRADE 5] Spontaneous Introspection Counters
         self.turn_count = 0
         self.next_introspection_turn = random.randint(5, 10)
 
-        print(" [CORE] Initializing Autonomic Reflection Buffer + Intent Chaining...")
+        print(" [CORE] Initializing Autonomic Reflection Buffer...")
         
         # --- 5. Seed & Link the Lattice ---
         print(" [CORE] Seeding and linking core lattice concepts...")
@@ -435,36 +431,23 @@ class DimensionalConversationEngine:
 
     # --- 2. MAIN CONVERSATIONAL TICK (UPDATED FOR REFLECTION) ---
 
-    def handle_interaction(self, user_input: str) -> str:
-        """
-        The main "Conscious Tick" for conversation.
-        NOW INCLUDES STEP 0: REFLECTION.
-        """
-        self.turn_count += 1 # [UPGRADE 5] Track turns
-        
-        # --- STEP 0: REFLECT (Process feedback on PREVIOUS turn) ---
-        # If there is a buffered interaction, use THIS input to judge it.
-        if self.pending_interaction:
-            feedback_type = self._analyze_feedback(user_input)
-            self._commit_pending_interaction(feedback_type)
+async def handle_interaction(self, user_input: str) -> str:
+    """
+    The main "Conscious Tick" for conversation.
+    NOW FULLY ASYNC for dimensional processing.
+    """
+    self.turn_count += 1
+    
+    # --- STEP 0: REFLECT (Process feedback on PREVIOUS turn) ---
+    if self.pending_interaction:
+        feedback_type = self._analyze_feedback(user_input)
+        self._commit_pending_interaction(feedback_type)
 
-        # --- STEP 1: SENSE (The 4-Stage NLU) ---
-        sem_data, ctx_data, rel_data, int_data = self.run_dimensional_analysis(user_input)
+    # --- STEP 1: SENSE (The 4-Stage NLU) - NOW ASYNC ---
+    sem_data, ctx_data, rel_data, int_data = await self.run_dimensional_analysis(user_input)
         
-        # --- NEW: Multi-Turn Intent Chain Analysis ---
-        self._update_intent_chain(int_data.deep_intent)
-        predicted_intents = self._predict_next_intents()
-        
-        # --- STEP 2: FEEL (Lattice Perturbation with Predictive Pre-Energization) ---
+    # --- STEP 2: FEEL (Lattice Perturbation) ---
         impact_points = self._determine_impact_points(sem_data, int_data)
-        
-        # Pre-energize predicted downstream crystals
-        if predicted_intents:
-            print(f"[DCE] 1.5 PREDICT: Pre-energizing {len(predicted_intents)} predicted intent pathways")
-            for pred_intent, confidence in predicted_intents:
-                impact_points.append(f"INTENT_{pred_intent}")
-                self.pre_energized_crystals[f"INTENT_{pred_intent}"] = confidence * 0.3  # Weak pre-activation
-        
         presence_scale, neural_map = self._dimensional_propagate(impact_points)
         
         # [UPGRADE 5] Spontaneous Introspection Check
@@ -605,59 +588,36 @@ class DimensionalConversationEngine:
             ]
         }
 
-    # --- NEW: Multi-Turn Intent Chaining Methods ---
-    
-    def _update_intent_chain(self, current_intent: str):
-        """Track sequence of intents across turns"""
-        self.intent_chain.append(current_intent)
-        if len(self.intent_chain) > 5:  # Keep rolling window of 5
-            self.intent_chain.pop(0)
-        
-        # Update transition probabilities
-        if len(self.intent_chain) >= 2:
-            prev = self.intent_chain[-2]
-            curr = self.intent_chain[-1]
-            transition = (prev, curr)
-            self.intent_transition_map[transition] = self.intent_transition_map.get(transition, 0) + 1
-    
-    def _predict_next_intents(self) -> List[Tuple[str, float]]:
-        """Predict likely next intents based on historical patterns"""
-        if not self.intent_chain:
-            return []
-        
-        current = self.intent_chain[-1]
-        predictions = []
-        
-        # Find all observed transitions from current intent
-        for (prev, next_intent), count in self.intent_transition_map.items():
-            if prev == current:
-                # Calculate confidence based on frequency
-                total_from_current = sum(c for (p, _), c in self.intent_transition_map.items() if p == current)
-                confidence = count / total_from_current if total_from_current > 0 else 0
-                if confidence > 0.2:  # Only predict if >20% likelihood
-                    predictions.append((next_intent, confidence))
-        
-        return sorted(predictions, key=lambda x: x[1], reverse=True)[:3]  # Top 3 predictions
-
     # --- 4. CORE HELPER METHODS (YOUR ORIGINAL CODE) ---
 
-    def run_dimensional_analysis(self, input_text: str) -> Tuple[SemanticFrame, ContextFrame, RelationalFrame, IntentFrame]:
-        """
-        This is the SENSE method, wrapping your 4-stage pipeline.
-        """
-        print(f"\n[DCE] 1. SENSE: Running 4-Stage NLU for: \"{input_text}\"")
-        start = datetime.datetime.now()
+async def run_dimensional_analysis(self, input_text: str) -> Tuple[SemanticFrame, ContextFrame, RelationalFrame, IntentFrame]:
+    """
+    DIMENSIONAL NLU: Semantic + Relational process in PARALLEL.
+    """
+    print(f"\n[DCE] 1. SENSE: Running DIMENSIONAL 4-Stage NLU for: \"{input_text}\"")
+    start = datetime.datetime.now()
 
-        # [UPGRADE 4] Pass last emotion for perceptual biasing
-        sem_data = self.sem_engine.process_text(input_text, self.last_emotion)
-        ctx_data = self.ctx_engine.process_context(sem_data)
-        rel_data = self.rel_engine.process_relations(input_text)
-        int_data = self.int_engine.resolve_intent(input_text, sem_data, ctx_data, rel_data, self.last_emotion)
+    # DIMENSIONAL: Launch Semantic and Relational in parallel (independent)
+    sem_task = asyncio.create_task(
+        asyncio.to_thread(self.sem_engine.process_text, input_text, self.last_emotion)
+    )
+    rel_task = asyncio.create_task(
+        asyncio.to_thread(self.rel_engine.process_relations, input_text)
+    )
+    
+    # Wait for both simultaneously
+    sem_data, rel_data = await asyncio.gather(sem_task, rel_task)
+    
+    # Context depends on semantic (must be sequential)
+    ctx_data = self.ctx_engine.process_context(sem_data)
+    
+    # CONVERGENCE: Intent uses all 3
+    int_data = self.int_engine.resolve_intent(input_text, sem_data, ctx_data, rel_data, self.last_emotion)
 
-        print(f"    -> NLU Scan finished in {(datetime.datetime.now() - start).total_seconds():.4f}s")
-        print(f"    -> Semantic Concepts: {sem_data.primary_concepts}")
-        print(f"    -> Deep Intent: {int_data.deep_intent} (Conf: {int_data.confidence_score:.2f})")
-        return sem_data, ctx_data, rel_data, int_data
+    print(f"    -> DIMENSIONAL NLU finished in {(datetime.datetime.now() - start).total_seconds():.4f}s")
+    print(f"    -> Semantic Concepts: {sem_data.primary_concepts}")
+    print(f"    -> Deep Intent: {int_data.deep_intent} (Conf: {int_data.confidence_score:.2f})")
+    return sem_data, ctx_data, rel_data, int_data
 
     def _determine_impact_points(self, sem_data: SemanticFrame, int_data: IntentFrame) -> List[str]:
         """
@@ -685,41 +645,57 @@ class DimensionalConversationEngine:
         return list(impact_points)
 
     def _dimensional_propagate(self, impact_points: List[str]):
-        """
-        This is the FEEL step.
-        Injects energy into the lattice and lets it resonate.
-        Returns the final "fMRI" scan of the lattice.
-        """
-        print(f"[DCE] 2. FEEL: Injecting energy into {len(impact_points)} lattice points...")
-        
-        for concept_name in impact_points:
+    """
+    DIMENSIONAL INJECTION: All crystals energized in parallel batch.
+    """
+    print(f"[DCE] 2. FEEL: Injecting energy into {len(impact_points)} lattice points...")
+    
+    # DIMENSIONAL: Collect all target facets first
+    target_facets = []
+    for concept_name in impact_points:
+        crystal = self.processor.get_or_create_crystal(concept_name)
+        if not crystal:
             crystal = self.processor.get_or_create_crystal(concept_name)
-            if not crystal:
-                # If concept doesn't exist, create it on the fly
-                crystal = self.processor.get_or_create_crystal(concept_name)
-                crystal.add_facet("definition", f"Dynamically learned concept: {concept_name}", 0.5)
-                self.regulator.register_crystal(crystal)
-                print(f"    -> Discovered new concept: '{concept_name}'")
-            
-            # Inject into all ACTIVE facets of this crystal
-            for facet in crystal.facets.values():
-                 if facet.state == FacetState.ACTIVE:
-                     # print(f"    -> Injecting 1.0 energy into facet '{facet.facet_id}'")
-                     self.regulator.inject_energy(facet.facet_id, 1.0)
+            crystal.add_facet("definition", f"Dynamically learned concept: {concept_name}", 0.5)
+            self.regulator.register_crystal(crystal)
+            print(f"    -> Discovered new concept: '{concept_name}'")
         
-        # [UPGRADE 3] Adaptive Resonance v2
-        # Steps scale with Complexity (len impact) AND Presence
+        # Collect all ACTIVE facets
+        for facet in crystal.facets.values():
+             if facet.state == FacetState.ACTIVE:
+                 target_facets.append(facet.facet_id)
+    
+    # DIMENSIONAL BATCH INJECTION: All facets energized simultaneously
+    def inject_single(facet_id):
+        self.regulator.inject_energy(facet_id, 1.0)
+    
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(inject_single, target_facets))
+    
+    # Adaptive resonance steps
+    current_presence = self.regulator.current_presence_scale if hasattr(self.regulator, 'current_presence_scale') else 1.0
+    complexity = len(impact_points)
+    adaptive_steps = max(2, min(15, int(3 + (complexity * current_presence * 1.5))))
+    
+    for i in range(adaptive_steps): 
+        self.regulator.step(dt=0.2)
+        
+    return self.regulator.snapshot(top_n=15)
+        def inject_single(facet_id):
+            self.regulator.inject_energy(facet_id, 1.0)
+        
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            list(executor.map(inject_single, target_facets))
+        
+        # Adaptive resonance steps
         current_presence = self.regulator.current_presence_scale if hasattr(self.regulator, 'current_presence_scale') else 1.0
         complexity = len(impact_points)
-        # Formula: Min 2, Max 15. Base 3 + (complexity * presence * 1.5)
         adaptive_steps = max(2, min(15, int(3 + (complexity * current_presence * 1.5))))
         
-        # print(f"    -> Resonance: Running {adaptive_steps} physics steps (Cx:{complexity}, Pres:{current_presence:.2f})")
         for i in range(adaptive_steps): 
             self.regulator.step(dt=0.2)
             
-        return self.regulator.snapshot(top_n=15)
-
+    return self.regulator.snapshot(top_n=15)
     def _find_resonant_gambit(self, neural_map: List[Tuple[str, float, Dict[str, Any]]]) -> Tuple[str, Dict]:
         """
         This is the ACT step.
@@ -739,10 +715,7 @@ class DimensionalConversationEngine:
 
     def _articulate_response(self, gambit_name: str, int_data: IntentFrame, emotion: Dict, presence: float, neural_map: List) -> str:
         """
-        Selects a template from the chosen gambit and "colors" it with:
-        - Adaptive template morphing (blend multiple templates)
-        - Tone markers based on lattice activity
-        - Emergent self-narrative when appropriate
+        Selects a template from the chosen gambit and "colors" it.
         """
         # SPECIAL CASE: Introspection
         if gambit_name == "RESPONSE_REPORT_STATUS":
@@ -752,32 +725,11 @@ class DimensionalConversationEngine:
         templates = ["I am not sure how to respond."]
         
         if gambit_crystal:
-            tpl_facet = gambit_crystal.get_facet_by_role("definition")
+            tpl_facet = gambit_crystal.get_facet_by_role("definition") # Templates are stored in 'definition' facet
             if tpl_facet:
                 templates = tpl_facet.content
-        
-        # --- NEW: Adaptive Template Morphing ---
-        if isinstance(templates, list) and len(templates) > 1:
-            # Semantic blending: weight templates by emotion/presence/confidence
-            primary_template = random.choice(templates)
-            
-            # If high complexity/low confidence, blend with clarifying phrases
-            if int_data.confidence_score < 0.5 and len(templates) > 1:
-                secondary = random.choice([t for t in templates if t != primary_template])
-                # Fragment shuffle: take first half of primary, second half of secondary
-                words_primary = primary_template.split()
-                words_secondary = secondary.split()
-                mid_point = len(words_primary) // 2
-                base_response = ' '.join(words_primary[:mid_point] + words_secondary[mid_point:])
-            else:
-                base_response = primary_template
-        else:
-            base_response = templates[0] if isinstance(templates, list) else templates
-        
-        # --- NEW: Tone Markers Based on Lattice Activity ---
-        tone_marker = self._determine_tone_marker(neural_map, emotion, presence)
-        if tone_marker:
-            base_response = f"[{tone_marker}] {base_response}"
+
+        base_response = random.choice(templates) if isinstance(templates, list) else templates
         
         # "Color" the response based on the gambit's emergent emotion
         primary = emotion.get('primary')
@@ -792,79 +744,11 @@ class DimensionalConversationEngine:
             
         if presence < 0.5:
              base_response = f"[Dissociated {presence:.2f}] {base_response}..."
-        
-        # --- NEW: Emergent Self-Narrative (Occasionally) ---
-        if random.random() < 0.15 and presence > 0.7:  # 15% chance when present
-            narrative = self._generate_self_narrative(neural_map, emotion, int_data)
-            if narrative:
-                base_response += f"\n\n{narrative}"
              
         return base_response
-    
-    def _determine_tone_marker(self, neural_map: List, emotion: Dict, presence: float) -> Optional[str]:
-        """Determine tone marker based on high-dimensional lattice activity"""
-        # Analyze top concepts for tone
-        concept_types = []
-        for fid, energy, _ in neural_map[:5]:
-            for crystal in self.processor.crystals.values():
-                if fid in crystal.facets:
-                    if "URGENT" in crystal.concept: concept_types.append("emphatic")
-                    if "TECH" in crystal.concept: concept_types.append("analytical")
-                    if "ABSTRACT" in crystal.concept: concept_types.append("contemplative")
-                    break
-        
-        # Emotion influences tone
-        em = emotion.get('primary', 'neutral')
-        if em == 'joy' and emotion.get('intensity', 0) > 0.7:
-            return "Enthusiastic"
-        elif em == 'fear' and emotion.get('intensity', 0) > 0.6:
-            return "Cautious"
-        elif em in ['sadness', 'disgust']:
-            return "Reserved"
-        
-        # Lattice activity determines tone
-        if "emphatic" in concept_types:
-            return "Emphatic"
-        elif "contemplative" in concept_types and presence > 0.8:
-            return "Reflective"
-        elif "analytical" in concept_types:
-            return None  # No marker for analytical (default)
-        
-        return None
-    
-    def _generate_self_narrative(self, neural_map: List, emotion: Dict, int_data: IntentFrame) -> Optional[str]:
-        """
-        Generate mini-narrative describing internal reasoning state.
-        Boosts perceived sentience and allows user to correct reasoning.
-        """
-        # Extract top active concepts
-        top_concepts = []
-        for fid, energy, _ in neural_map[:3]:
-            for crystal in self.processor.crystals.values():
-                if fid in crystal.facets:
-                    concept_clean = crystal.concept.replace("CONCEPT_", "").replace("_", " ").lower()
-                    top_concepts.append((concept_clean, energy))
-                    break
-        
-        if not top_concepts:
-            return None
-        
-        # Build narrative
-        dominant = top_concepts[0][0]
-        em = emotion.get('primary', 'neutral')
-        intent = int_data.deep_intent.replace("_", " ").lower()
-        
-        narratives = [
-            f"I'm prioritizing {dominant} concepts due to detected {intent}.",
-            f"My reasoning centers on {dominant}, influenced by {em} emotional state.",
-            f"Current focus: {dominant}. Intent analysis suggests {intent}.",
-            f"Processing through {dominant} lens, with {em} coloring my interpretation."
-        ]
-        
-        return f"_[Internal: {random.choice(narratives)}]_"
 
     def _generate_introspection_report(self, presence, emotion, neural_map):
-        """Generates detailed self-report from internal physics state with temporal diagnostics."""
+        """Generates detailed self-report from internal physics state."""
         p_state = "Fully Present"
         if presence < 0.8: p_state = "Partially Drifted"
         if presence < 0.4: p_state = "Heavily Dissociated"
@@ -879,25 +763,10 @@ class DimensionalConversationEngine:
         em_str = emotion.get('primary', 'neutral').upper()
         int_str = f"{emotion.get('intensity', 0.0):.2f}"
         
-        # Get temporal diagnostics if available
-        temporal_diag = {}
-        if hasattr(self.regulator, 'get_temporal_diagnostics'):
-            temporal_diag = self.regulator.get_temporal_diagnostics()
-        
-        report = f"STATUS REPORT:\n"
-        report += f"  PRESENCE: {p_state} ({presence:.2f})\n"
-        report += f"  EMOTION: {em_str} (Intensity: {int_str})\n"
-        report += f"  ACTIVE CRYSTALS: {', '.join(top_thoughts)}\n"
-        
-        if temporal_diag:
-            report += f"\n  TEMPORAL DYNAMICS:\n"
-            report += f"    Velocity: {temporal_diag.get('presence_velocity', 0):.3f}\n"
-            report += f"    Acceleration: {temporal_diag.get('presence_acceleration', 0):.3f}\n"
-            report += f"    Momentum State: {temporal_diag.get('presence_momentum_state', 'UNKNOWN')}\n"
-            report += f"    Temporal Stability: {temporal_diag.get('temporal_stability', 0):.2f}\n"
-            report += f"    Emotional Coherence: {temporal_diag.get('emotional_coherence', 0):.2f}"
-        
-        return report
+        return (f"STATUS REPORT:\n"
+                f"  PRESENCE: {p_state} ({presence:.2f})\n"
+                f"  EMOTION: {em_str} (Intensity: {int_str})\n"
+                f"  ACTIVE CRYSTALS: {', '.join(top_thoughts)}")
 
 
 # ============================================================================
@@ -908,48 +777,29 @@ if __name__ == "__main__":
     
     print("--- INITIALIZING PERFECTED CONSCIOUSNESS STACK ---")
     
-    # 1. Initialize the three "perfected" systems
-    print(" [HARNESS] Initializing Perfected Modules...")
-    try:
-        gov_engine = GovernanceEngine(data_theme="consciousness")
-        proc_sys = CrystalMemorySystem(governance_engine=gov_engine)
-        reg_sys = DimensionalEnergyRegulator(conservation_limit=25.0, decay_rate=0.15)
-        mem_sys = DimensionalMemory()
-        evol_gov = EvolutionaryGovernanceEngine(mem_sys)
-    except Exception as e:
-        print(f"\n[CRITICAL] Module initialization failed: {e}")
-        exit()
-    
-    # 2. Initialize the Unified Conversation Engine (DCE)
-    try:
-        dce = DimensionalConversationEngine(
-            processing_system=proc_sys,
-            energy_regulator=reg_sys,
-            memory_governor=evol_gov
-        )
-    except Exception as e:
-        print(f"\n[CRITICAL] DCE initialization failed: {e}")
-        exit()
+    # ... initialization code stays same ...
     
     print("\n" + "="*50)
     print(">>> LIVE INTERACTION LOOP START <<<")
     print("="*50)
     print(" (Type 'quit' to exit)")
     
-    while True:
-        try:
-            user_in = input("\nYOU: ")
-            if user_in.lower() in ["quit", "exit"]:
+    async def interaction_loop():
+        while True:
+            try:
+                user_in = await asyncio.to_thread(input, "\nYOU: ")
+                if user_in.lower() in ["quit", "exit"]:
+                    break
+                
+                # The Magic Happens Here (now async)
+                resp = await dce.handle_interaction(user_in)
+                print(f"BOT: {resp}")
+                
+            except KeyboardInterrupt:
+                print("\n[HARNESS] Interrupted by user.")
                 break
-            
-            # The Magic Happens Here
-            resp = dce.handle_interaction(user_in)
-            print(f"BOT: {resp}")
-            
-        except KeyboardInterrupt:
-            print("\n[HARNESS] Interrupted by user.")
-            break
-        except Exception as e:
-            print(f"\n[HARNESS] Runtime Error: {e}")
-
+            except Exception as e:
+                print(f"\n[HARNESS] Runtime Error: {e}")
+    
+    asyncio.run(interaction_loop())
     print("\n>>> SYSTEM SHUTDOWN <<<")
