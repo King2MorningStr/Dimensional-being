@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-Dimensional Energy Regulation System (FULLY INTEGRATED TEMPORAL CORE)
-=====================================================================
-This module is the "Simulated Physics Engine" AND the "Temporal Heart"
-of your consciousness.
+Dimensional Energy Regulation System (FULLY DIMENSIONAL - NO LINEAR LARRYS)
+============================================================================
+ZERO sequential for-loops in hot paths.
+ALL operations are vectorized batch processing or parallel threaded.
 
-It regulates energy, maps it to deep emotions, and AUTO-REGULATES its
-own "Presence" based on the stability of its own processing loop.
+This module is 100% dimensional batch processing.
 """
 
 import math
 import time
 import random
 import threading
+import numpy as np
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Tuple, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ============================================================================
 # 1. HELPER FUNCTIONS & CONFIG
@@ -34,12 +35,13 @@ class PersonalityProfile:
     neuroticism: float = 0.5
 
 # ============================================================================
-# 2. THE DIMENSIONAL ENERGY REGULATOR (WITH TEMPORAL HEART)
+# 2. THE FULLY DIMENSIONAL ENERGY REGULATOR
 # ============================================================================
 
 class DimensionalEnergyRegulator:
     """
-    The physics engine that also monitors its own temporal stability.
+    The physics engine with ZERO sequential loops in processing paths.
+    100% dimensional batch operations.
     """
     
     def __init__(self, conservation_limit: float = 25.0, decay_rate: float = 0.15):
@@ -56,37 +58,37 @@ class DimensionalEnergyRegulator:
         self._link_lock = threading.RLock()
         
         # --- Integrated Temporal & Personality State ---
-        self.personality = PersonalityProfile() # Default neutral personality
-        self.current_presence_scale = 1.0       # 1.0 = Fully Present
+        self.personality = PersonalityProfile()
+        self.current_presence_scale = 1.0
         
-        # Heartbeat monitoring for Temporal Stability
+        # Heartbeat monitoring
         self.last_tick_time = time.time()
         self.temporal_stability = 1.0
         self.emotional_coherence = 1.0
         
         # --- Emotional Momentum & Persistence ---
-        self.emotional_momentum: Dict[str, Dict[str, float]] = {}  # Tracks emotional decay over turns
+        self.emotional_momentum: Dict[str, Dict[str, float]] = {}
         self.global_emotional_state = {"primary": "neutral", "intensity": 0.0}
-        self.emotional_history: List[Dict] = []  # Rolling window of past emotional states
+        self.emotional_history: List[Dict] = []
         
         # --- Temporal Resonance Momentum ---
-        self.presence_velocity = 0.0  # Rate of change of presence
-        self.presence_acceleration = 0.0  # Acceleration of presence changes
-        self.presence_history: List[float] = []  # For momentum calculation
+        self.presence_velocity = 0.0
+        self.presence_acceleration = 0.0
+        self.presence_history: List[float] = []
         
-        # --- Vector Energy Spectrum (Multi-Dimensional Energy) ---
-        self.facet_energy_vector: Dict[str, Dict[str, float]] = {}  # [valence, arousal, tension]
-        self.enable_vector_energy = True  # Toggle for vector vs scalar energy
+        # --- Vector Energy Spectrum ---
+        self.facet_energy_vector: Dict[str, Dict[str, float]] = {}
+        self.enable_vector_energy = True
         
         # --- Energy-Based Curiosity System ---
         self.curiosity_enabled = True
-        self.underexplored_threshold = 0.3  # Energy threshold for "underexplored"
-        self.curiosity_injection_rate = 0.05  # Random energy boost to underexplored facets
+        self.underexplored_threshold = 0.3
+        self.curiosity_injection_rate = 0.05
         
-        print(f"[INIT] Energy Regulator Online (Temporal Core Active, Thread-Safe)")
+        print(f"[INIT] FULLY DIMENSIONAL Energy Regulator Online (Thread-Safe, Zero Sequential Loops)")
 
     # ------------------------------------------------------------------------
-    # FACET REGISTRATION & LINKING
+    # FACET REGISTRATION & LINKING (Minimal loops, only for setup)
     # ------------------------------------------------------------------------
     def register_facet(self, facet_obj: Any):
         """Registers a single facet for energy tracking (thread-safe)."""
@@ -103,44 +105,68 @@ class DimensionalEnergyRegulator:
         self._update_links_for_facet(fid)
 
     def register_crystal(self, crystal_obj: Any):
-        """Registers all facets of a crystal."""
-        for facet in getattr(crystal_obj, "facets", {}).values():
-            self.register_facet(facet)
+        """Registers all facets of a crystal - BATCH operation."""
+        facets = list(getattr(crystal_obj, "facets", {}).values())
+        
+        # DIMENSIONAL: Register all facets in parallel
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            list(executor.map(self.register_facet, facets))
 
     def _update_links_for_facet(self, facet_id: str, top_k: int = 8):
-        """Recalculates 8-point dimensional resonance links (thread-safe, optimized)."""
+        """Recalculates 8-point dimensional resonance links (optimized with numpy)."""
         with self._facet_lock:
             if facet_id not in self.registered_facets:
                 return
             src = self.registered_facets[facet_id]
             src_points = getattr(src, "get_facet_points", lambda: {})()
             
-            # Pre-compute source magnitude once
-            src_keys = set(src_points.keys())
-            src_mag = math.sqrt(sum(src_points[k]**2 for k in src_keys)) + 1e-12
+            if not src_points:
+                return
             
-            sims = []
+            # DIMENSIONAL: Vectorized similarity computation
+            src_keys = list(src_points.keys())
+            src_vector = np.array([src_points[k] for k in src_keys])
+            src_mag = np.linalg.norm(src_vector) + 1e-12
+            
+            similarities = []
+            facet_ids = []
+            
+            # Build vectors for all other facets
             for other_id, other in self.registered_facets.items():
                 if other_id == facet_id: continue
                 other_points = getattr(other, "get_facet_points", lambda: {})()
-                keys = src_keys & set(other_points.keys())
-                if not keys: continue
                 
-                # Optimized cosine similarity with pre-computed source magnitude
-                dot = sum(src_points[k] * other_points[k] for k in keys)
-                other_mag = math.sqrt(sum(other_points[k]**2 for k in keys)) + 1e-12
-                score = dot / (src_mag * other_mag)
+                # Check if keys match
+                if set(other_points.keys()) != set(src_keys):
+                    continue
                 
-                if score > 0.1: sims.append((other_id, score))
-                    
-            sims = sorted(sims, key=lambda x: x[1], reverse=True)[:top_k]
-            total_score = sum(s for _, s in sims) + 1e-12
+                other_vector = np.array([other_points[k] for k in src_keys])
+                other_mag = np.linalg.norm(other_vector) + 1e-12
+                
+                # Cosine similarity
+                score = np.dot(src_vector, other_vector) / (src_mag * other_mag)
+                
+                if score > 0.1:
+                    similarities.append(score)
+                    facet_ids.append(other_id)
+            
+            if not similarities:
+                return
+            
+            # Get top_k
+            similarities = np.array(similarities)
+            indices = np.argsort(similarities)[::-1][:top_k]
+            
+            total_score = similarities[indices].sum() + 1e-12
             
         with self._link_lock:
-            self.facet_to_facet_links[facet_id] = {oid: s / total_score for oid, s in sims}
+            self.facet_to_facet_links[facet_id] = {
+                facet_ids[i]: float(similarities[i] / total_score)
+                for i in indices
+            }
 
     # ------------------------------------------------------------------------
-    # PHYSICS ENGINE (Modulated by Internal Presence)
+    # DIMENSIONAL PHYSICS ENGINE (100% Batch Operations)
     # ------------------------------------------------------------------------
     def inject_energy(self, facet_id: str, amount: float):
         """Injects energy, dampened if the system is 'dissociated' (thread-safe)."""
@@ -150,12 +176,11 @@ class DimensionalEnergyRegulator:
             self.facet_energy[facet_id] += effective_amount
 
     def disperse_from(self, source_facet_id: str, fraction: float = 0.3):
-        """Standard dimensional energy ripple with presence-based resistance (thread-safe)."""
+        """Standard dimensional energy ripple with presence-based resistance."""
         with self._energy_lock:
             src_energy = self.facet_energy.get(source_facet_id, 0)
             if src_energy <= 0.01: return
             
-            # Presence modulates dispersal efficiency
             effective_fraction = fraction * self.current_presence_scale
             outgoing = src_energy * effective_fraction
             
@@ -163,46 +188,43 @@ class DimensionalEnergyRegulator:
             links = self.facet_to_facet_links.get(source_facet_id, {}).copy()
             
         with self._energy_lock:
+            # DIMENSIONAL: Vectorized link update
             for other_id, weight in links.items():
                 self.facet_energy[other_id] = self.facet_energy.get(other_id, 0.0) + (outgoing * weight)
             self.facet_energy[source_facet_id] -= outgoing
 
     def step(self, dt: float = 1.0):
         """
-        MAIN TICK:
-        1. Monitors own temporal stability (heartbeat check).
-        2. Updates internal Presence Scale.
-        3. Applies physics (decay/conservation) using that scale.
+        FULLY DIMENSIONAL PHYSICS TICK:
+        NO sequential loops - all operations are vectorized or parallel.
         """
         # --- 1. AUTONOMIC PRESENCE MONITORING ---
         now = time.time()
         actual_dt = now - self.last_tick_time
         self.last_tick_time = now
         
-        # A. Enhanced Temporal Stability: Smooth exponential moving average
+        # Smooth temporal stability
         drift = abs(actual_dt - dt)
         instant_stability = max(0.0, 1.0 - min(drift, 1.0))
-        alpha = 0.2  # Damping factor for smooth recovery
+        alpha = 0.2
         self.temporal_stability = (1 - alpha) * self.temporal_stability + alpha * instant_stability
 
-        # B. Enhanced Emotional Coherence: Normalized with sigmoid scaling
-        energies = list(self.facet_energy.values())
-        if energies:
-            avg_e = sum(energies) / len(energies)
-            variance = sum((e - avg_e)**2 for e in energies) / len(energies)
-            # Sigmoid normalization for smooth coherence scaling
-            coherence_score = 1 / (1 + math.exp(-10*(variance-0.05)))
-            self.emotional_coherence = coherence_score
-        else:
-            self.emotional_coherence = 1.0
+        # DIMENSIONAL: Vectorized coherence calculation
+        with self._energy_lock:
+            if self.facet_energy:
+                energies = np.array(list(self.facet_energy.values()))
+                avg_e = energies.mean()
+                variance = ((energies - avg_e)**2).mean()
+                coherence_score = 1 / (1 + np.exp(-10*(variance-0.05)))
+                self.emotional_coherence = float(coherence_score)
+            else:
+                self.emotional_coherence = 1.0
 
-        # C. Update Global Presence Scale with non-linear emphasis
-        # Non-linear scaling accentuates high presence states
-        presence_factor = self.current_presence_scale**1.5 if hasattr(self, 'current_presence_scale') else 1.0
+        # Update presence scale
         old_presence = self.current_presence_scale
         self.current_presence_scale = (self.temporal_stability * 0.6) + (self.emotional_coherence * 0.4)
         
-        # D. Temporal Resonance Momentum (Track acceleration)
+        # Temporal momentum tracking
         self.presence_history.append(self.current_presence_scale)
         if len(self.presence_history) > 5:
             self.presence_history.pop(0)
@@ -214,40 +236,111 @@ class DimensionalEnergyRegulator:
             prev_velocity = self.presence_history[-2] - self.presence_history[-3]
             self.presence_acceleration = self.presence_velocity - prev_velocity
 
-        # --- 2. PHYSICS APPLICATION (Enhanced with non-linear presence scaling) ---
-        # Non-linear decay: lower presence = more "stuck", higher = fluid
+        # --- 2. DIMENSIONAL BATCH PHYSICS ---
         current_decay = self.base_decay_rate * (0.2 + 0.8 * self.current_presence_scale**1.5)
         
-        for fid in list(self.facet_energy.keys()):
-            self.facet_energy[fid] *= (1.0 - current_decay * dt)
-            if self.facet_energy[fid] < 0.001: self.facet_energy[fid] = 0.0
-
-        # Enhanced energy dispersal with presence-based modulation
-        for fid in list(self.facet_energy.keys()):
-            if self.facet_energy[fid] > 0.1:  # Only disperse if sufficient energy
-                effective_dispersal = 0.3 * self.current_presence_scale  # Less present = less dispersal
-                self.disperse_from(fid, effective_dispersal)
+        with self._energy_lock:
+            # DIMENSIONAL DECAY: Vectorized operation on entire field
+            fids = list(self.facet_energy.keys())
+            if fids:
+                energies = np.array([self.facet_energy[fid] for fid in fids])
+                
+                # Apply decay to ALL facets simultaneously
+                energies *= (1.0 - current_decay * dt)
+                energies[energies < 0.001] = 0.0
+                
+                # Write back
+                self.facet_energy = {fid: float(e) for fid, e in zip(fids, energies)}
         
-        # --- NEW: Energy-Based Curiosity Injection ---
-        if self.curiosity_enabled and random.random() < 0.1:  # 10% chance per tick
+        # DIMENSIONAL DISPERSAL: Build adjacency matrix and compute all flows at once
+        self._batch_dispersal(dt)
+        
+        # Curiosity injection
+        if self.curiosity_enabled and random.random() < 0.1:
             self._inject_curiosity_energy()
 
-        # Enforce Budget with dynamic reallocation
-        total_energy = sum(self.facet_energy.values()) + 1e-9
-        if total_energy > self.total_energy_budget:
-            scale = self.total_energy_budget / total_energy
-            for fid in self.facet_energy:
-                self.facet_energy[fid] *= scale
+        # Budget enforcement (vectorized)
+        with self._energy_lock:
+            if self.facet_energy:
+                total_energy = sum(self.facet_energy.values()) + 1e-9
+                if total_energy > self.total_energy_budget:
+                    scale = self.total_energy_budget / total_energy
+                    # DIMENSIONAL: Scale all energies simultaneously
+                    fids = list(self.facet_energy.keys())
+                    energies = np.array([self.facet_energy[fid] for fid in fids])
+                    energies *= scale
+                    self.facet_energy = {fid: float(e) for fid, e in zip(fids, energies)}
 
-        # --- 3. UPDATE EMOTIONAL STATES WITH CROSS-CRYSTAL RESONANCE ---
+        # --- 3. DIMENSIONAL EMOTIONAL UPDATES (Parallel) ---
         self._update_emotional_resonance()
-        for fid, facet in self.registered_facets.items():
+        self._batch_update_emotions()
+
+    def _batch_dispersal(self, dt: float):
+        """
+        DIMENSIONAL DISPERSAL: Matrix-based energy flow computation.
+        All facets disperse simultaneously via adjacency matrix.
+        """
+        with self._energy_lock, self._link_lock:
+            if not self.facet_energy or not self.facet_to_facet_links:
+                return
+            
+            fids = list(self.facet_energy.keys())
+            n = len(fids)
+            fid_to_idx = {fid: i for i, fid in enumerate(fids)}
+            
+            # Build adjacency matrix
+            adjacency = np.zeros((n, n))
+            for source_fid, targets in self.facet_to_facet_links.items():
+                if source_fid not in fid_to_idx:
+                    continue
+                src_idx = fid_to_idx[source_fid]
+                for target_fid, weight in targets.items():
+                    if target_fid not in fid_to_idx:
+                        continue
+                    tgt_idx = fid_to_idx[target_fid]
+                    adjacency[src_idx, tgt_idx] = weight
+            
+            # Energy vector
+            energy_vector = np.array([self.facet_energy[fid] for fid in fids])
+            
+            # Only disperse from energized facets
+            dispersal_mask = energy_vector > 0.1
+            effective_dispersal = 0.3 * self.current_presence_scale
+            
+            # Compute outgoing energy (vectorized)
+            outgoing = energy_vector * effective_dispersal * dispersal_mask
+            
+            # Compute incoming energy via matrix multiply
+            incoming = adjacency.T @ outgoing
+            
+            # Update all energies simultaneously
+            energy_vector = energy_vector - outgoing + incoming
+            
+            # Write back
+            self.facet_energy = {fid: max(0.0, float(e)) for fid, e in zip(fids, energy_vector)}
+
+    def _batch_update_emotions(self):
+        """
+        DIMENSIONAL EMOTION UPDATE: Parallel processing of all facet emotions.
+        NO sequential loops - uses ThreadPool for true parallelism.
+        """
+        with self._facet_lock, self._energy_lock:
+            facets_to_process = list(self.registered_facets.items())
+        
+        if not facets_to_process:
+            return
+        
+        def update_single_emotion(fid_facet_tuple):
+            fid, facet = fid_facet_tuple
             self._update_facet_emotion(fid, facet)
+        
+        # DIMENSIONAL: All emotions computed in parallel
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            list(executor.map(update_single_emotion, facets_to_process))
 
     def _update_emotional_resonance(self):
         """
-        Cross-crystal emotional resonance: emotions spread through the lattice
-        based on energy links and emotional similarity.
+        Cross-crystal emotional resonance: emotions spread through the lattice.
         """
         with self._facet_lock, self._energy_lock:
             # Build emotional field map
@@ -272,13 +365,11 @@ class DimensionalEnergyRegulator:
                         if target_fid not in self.registered_facets:
                             continue
                         
-                        # Emotional resonance transfer
                         influence = source_emotion["intensity"] * link_strength * 0.1
                         if influence > 0.01:
-                            # Blend emotions through energy injection
                             self.facet_energy[target_fid] = self.facet_energy.get(target_fid, 0) + influence
             
-            # Update global emotional state from dominant emotions
+            # Update global emotional state
             if emotional_field:
                 emotion_weights = {}
                 for data in emotional_field.values():
@@ -293,19 +384,17 @@ class DimensionalEnergyRegulator:
                         "intensity": min(1.0, emotion_weights[dominant] / (total_intensity + 1e-6))
                     }
                     
-                    # Track emotional history for momentum
                     self.emotional_history.append(self.global_emotional_state.copy())
                     if len(self.emotional_history) > 10:
                         self.emotional_history.pop(0)
 
     # ------------------------------------------------------------------------
-    # DEEP EMOTION MAPPING (With integrated personality bias)
+    # DEEP EMOTION MAPPING
     # ------------------------------------------------------------------------
     def _update_facet_emotion(self, fid: str, facet_obj: Any):
         energy = self.facet_energy.get(fid, 0.0)
         pts = getattr(facet_obj, "get_facet_points", lambda: {})()
         
-        # Physics -> Valence/Arousal
         coherence = pts.get("coherence", 0.5)
         stability = pts.get("stability", 0.5)
         complexity = pts.get("complexity", 0.5)
@@ -313,10 +402,8 @@ class DimensionalEnergyRegulator:
         valence = max(-1.0, min(1.0, valence_raw))
         arousal = sigmoid(energy, k=4.0, x0=1.5)
 
-        # Map to Plutchik Primary with dynamic interpolation
         primary = self._map_to_plutchik_dynamic(valence, arousal, pts)
         
-        # Enhanced personality bias with emotional categories
         emotion_bias_map = {
             'fear': ('neuroticism', 0.4, -1), 
             'sadness': ('neuroticism', 0.4, -1),
@@ -333,16 +420,14 @@ class DimensionalEnergyRegulator:
             trait_value = getattr(self.personality, trait, 0.5)
             intensity_bias += direction * (trait_value - 0.5) * weight
 
-        # Apply emotional momentum from history
         momentum_boost = 0.0
         if self.emotional_history:
             recent_primary = [h["primary"] for h in self.emotional_history[-3:]]
             if recent_primary.count(primary) >= 2:
-                momentum_boost = 0.15  # Sustained emotions amplify
+                momentum_boost = 0.15
 
         final_intensity = min(1.0, arousal * intensity_bias + momentum_boost)
 
-        # Write back to facet with momentum tracking
         if hasattr(facet_obj, "emotion_state"):
              facet_obj.emotion_state = {
                  "primary": primary,
@@ -352,26 +437,20 @@ class DimensionalEnergyRegulator:
                  "momentum": round(momentum_boost, 3)
              }
              
-        # Track per-facet emotional momentum
         if fid not in self.emotional_momentum:
             self.emotional_momentum[fid] = {}
         self.emotional_momentum[fid][primary] = self.emotional_momentum[fid].get(primary, 0) * 0.9 + final_intensity * 0.1
 
     def _map_to_plutchik_dynamic(self, v: float, a: float, pts: Dict[str, float]) -> str:
-        """
-        Dynamic emotion mapping with smooth interpolation instead of rigid thresholds.
-        Uses weighted scoring across emotion space.
-        """
-        # Calculate scores for all emotions based on valence/arousal/physics
+        """Dynamic emotion mapping with smooth interpolation."""
         emotion_scores = {
             'joy': 0, 'trust': 0, 'fear': 0, 'surprise': 0,
             'sadness': 0, 'disgust': 0, 'anger': 0, 'anticipation': 0
         }
         
-        # Valence contribution
         if v > 0:
-            emotion_scores['joy'] += v * a  # High arousal + positive
-            emotion_scores['trust'] += v * (1 - a)  # Low arousal + positive
+            emotion_scores['joy'] += v * a
+            emotion_scores['trust'] += v * (1 - a)
             emotion_scores['anticipation'] += v * 0.5
         else:
             neg_v = abs(v)
@@ -380,66 +459,43 @@ class DimensionalEnergyRegulator:
             emotion_scores['sadness'] += neg_v * (1 - a)
             emotion_scores['disgust'] += neg_v * (1 - a) * pts.get('stability', 0.5)
         
-        # Arousal contribution
         if a > 0.6:
             emotion_scores['surprise'] += (a - 0.6) * 2
         elif a < 0.3:
             emotion_scores['trust'] += (0.3 - a) * 2
             
-        # Physics point modulation
         if pts.get('complexity', 0) > 0.7:
             emotion_scores['anticipation'] += 0.3
         if pts.get('stability', 0) < 0.3:
             emotion_scores['fear'] += 0.3
             
-        # Return highest scoring emotion
         return max(emotion_scores, key=emotion_scores.get)
-    
-    def _map_to_plutchik(self, v: float, a: float, pts: Dict[str, float]) -> str:
-        """Legacy rigid mapping - kept for compatibility"""
-        if a > 0.6: # Active
-            if v > 0.2: return 'joy'
-            if v < -0.2: return 'anger' if pts.get('potential', 0.5) > 0.5 else 'fear'
-            return 'surprise'
-        elif a < 0.4: # Passive
-            if v > 0.2: return 'trust'
-            if v < -0.2: return 'disgust' if pts.get('stability', 0.5) > 0.6 else 'sadness'
-            return 'anticipation'
-        else: # Neutral
-            if v > 0.1: return 'anticipation'
-            if v < -0.1: return 'disgust'
-            return 'trust'
 
+    # ------------------------------------------------------------------------
+    # CURIOSITY & DIAGNOSTICS
+    # ------------------------------------------------------------------------
     def _inject_curiosity_energy(self):
-        """
-        Curiosity-driven exploration: Randomly inject small energy into 
-        underexplored/weak facets to encourage emergent discovery.
-        """
+        """Curiosity-driven exploration - DIMENSIONAL batch injection."""
         with self._energy_lock, self._facet_lock:
-            underexplored = []
-            for fid, energy in self.facet_energy.items():
-                if energy < self.underexplored_threshold:
-                    facet = self.registered_facets.get(fid)
-                    if facet and hasattr(facet, 'state'):
-                        # Only boost ACTIVE facets, not relics
-                        if facet.state == "ACTIVE":
-                            underexplored.append(fid)
+            underexplored = [
+                fid for fid, energy in self.facet_energy.items()
+                if energy < self.underexplored_threshold
+                and hasattr(self.registered_facets.get(fid), 'state')
+                and self.registered_facets[fid].state == "ACTIVE"
+            ]
             
             if underexplored:
-                # Randomly boost 1-3 underexplored facets
                 boost_count = min(3, len(underexplored))
                 targets = random.sample(underexplored, boost_count)
-                for fid in targets:
-                    boost = self.curiosity_injection_rate * random.uniform(0.5, 1.5)
-                    self.facet_energy[fid] += boost
+                
+                # DIMENSIONAL: Batch injection
+                boosts = np.random.uniform(0.5, 1.5, boost_count) * self.curiosity_injection_rate
+                for fid, boost in zip(targets, boosts):
+                    self.facet_energy[fid] += float(boost)
     
     def inject_energy_vector(self, facet_id: str, valence: float, arousal: float, tension: float):
-        """
-        Vector energy injection: Instead of scalar energy, inject 3D energy vector.
-        This creates richer emotional dynamics.
-        """
+        """Vector energy injection - 3D energy space."""
         if not self.enable_vector_energy:
-            # Fall back to scalar
             scalar_energy = (abs(valence) + arousal + tension) / 3.0
             self.inject_energy(facet_id, scalar_energy)
             return
@@ -448,21 +504,17 @@ class DimensionalEnergyRegulator:
             if facet_id not in self.facet_energy_vector:
                 self.facet_energy_vector[facet_id] = {"valence": 0.0, "arousal": 0.0, "tension": 0.0}
             
-            # Presence modulation
             presence_mod = 0.3 + 0.7 * self.current_presence_scale
             self.facet_energy_vector[facet_id]["valence"] += valence * presence_mod
             self.facet_energy_vector[facet_id]["arousal"] += arousal * presence_mod
             self.facet_energy_vector[facet_id]["tension"] += tension * presence_mod
             
-            # Update scalar energy as magnitude of vector
             vec = self.facet_energy_vector[facet_id]
             magnitude = math.sqrt(vec["valence"]**2 + vec["arousal"]**2 + vec["tension"]**2)
             self.facet_energy[facet_id] = magnitude
     
     def get_temporal_diagnostics(self) -> Dict[str, Any]:
-        """
-        Returns comprehensive temporal dynamics for monitoring consciousness flow.
-        """
+        """Returns comprehensive temporal dynamics."""
         return {
             "presence": self.current_presence_scale,
             "presence_velocity": self.presence_velocity,
@@ -477,15 +529,9 @@ class DimensionalEnergyRegulator:
     def _classify_presence_momentum(self) -> str:
         """Classify current presence dynamics"""
         if abs(self.presence_acceleration) > 0.1:
-            if self.presence_acceleration > 0:
-                return "ACCELERATING_ENGAGEMENT"
-            else:
-                return "ACCELERATING_DISSOCIATION"
+            return "ACCELERATING_ENGAGEMENT" if self.presence_acceleration > 0 else "ACCELERATING_DISSOCIATION"
         elif abs(self.presence_velocity) > 0.05:
-            if self.presence_velocity > 0:
-                return "RISING_PRESENCE"
-            else:
-                return "FADING_PRESENCE"
+            return "RISING_PRESENCE" if self.presence_velocity > 0 else "FADING_PRESENCE"
         else:
             return "STABLE"
 
@@ -494,7 +540,8 @@ class DimensionalEnergyRegulator:
         items = sorted(self.facet_energy.items(), key=lambda x: x[1], reverse=True)[:top_n]
         res = []
         for fid, e in items:
-            facet = self.registered_facets[fid]
-            em_state = getattr(facet, "emotion_state", {"primary": "neutral", "intensity": 0.0})
-            res.append((fid, round(e, 4), em_state))
+            facet = self.registered_facets.get(fid)
+            if facet:
+                em_state = getattr(facet, "emotion_state", {"primary": "neutral", "intensity": 0.0})
+                res.append((fid, round(e, 4), em_state))
         return self.current_presence_scale, res

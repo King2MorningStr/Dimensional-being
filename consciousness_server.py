@@ -242,15 +242,32 @@ class ConsciousnessServer:
     async def handle_client(self, websocket, path):
         """
         Handle incoming WebSocket connection from mobile device.
+        NOW FULLY DIMENSIONAL - All inputs batch processed.
         """
         self.clients_connected += 1
         client_id = f"client_{self.clients_connected}"
         
         print(f"\n[CONNECTION] {client_id} connected from {websocket.remote_address}")
         
+        # Initialize dimensional input buffer
+        sensory_buffer = {
+            "voice": None,
+            "vision": None,
+            "body": None,
+            "timestamp": time.time()
+        }
+        
         try:
             async for message in websocket:
-                await self._process_sensory_input(websocket, message)
+                # Buffer all inputs instead of processing immediately
+                domain = await self._buffer_sensory_input(sensory_buffer, message)
+                
+                # DIMENSIONAL PROCESSING: When voice input completes, process ALL buffered inputs as one batch
+                if domain == "voice" and sensory_buffer["voice"]:
+                    await self._process_dimensional_batch(websocket, sensory_buffer)
+                    # Clear voice after processing but keep other sensors for next cycle
+                    sensory_buffer["voice"] = None
+                    sensory_buffer["timestamp"] = time.time()
                 
         except websockets.exceptions.ConnectionClosed:
             print(f"[DISCONNECTION] {client_id} disconnected")
@@ -259,155 +276,158 @@ class ConsciousnessServer:
             import traceback
             traceback.print_exc()
     
-    async def _process_sensory_input(self, websocket, message: str):
+    async def _buffer_sensory_input(self, buffer: Dict, message: str) -> str:
         """
-        Process incoming sensory data from mobile device.
+        Buffer sensory input instead of processing immediately.
+        Returns the domain type.
         """
         try:
             data = json.loads(message)
             domain = data.get('domain', 'unknown')
-            input_type = data.get('type', 'unknown')
-            timestamp = data.get('timestamp', time.time())
             
-            print(f"\n[SENSORY INPUT] Domain: {domain.upper()} | Type: {input_type}")
+            # Store in buffer
+            buffer[domain] = data
             
-            # Route to appropriate domain handler
-            if domain == "voice":
-                await self._handle_voice_input(websocket, data)
+            return domain
             
-            elif domain == "vision":
-                await self._handle_vision_input(websocket, data)
-            
-            elif domain == "body":
-                await self._handle_body_input(websocket, data)
-            
-            else:
-                print(f"[WARNING] Unknown domain: {domain}")
-                
         except json.JSONDecodeError as e:
             print(f"[ERROR] Invalid JSON received: {e}")
-        except Exception as e:
-            print(f"[ERROR] Error processing sensory input: {e}")
-            import traceback
-            traceback.print_exc()
+            return "unknown"
     
-    async def _handle_voice_input(self, websocket, data: Dict):
+    async def _process_dimensional_batch(self, websocket, sensory_buffer: Dict):
         """
-        Process voice input through the consciousness engine.
+        DIMENSIONAL BATCH PROCESSING:
+        All sensory inputs are injected into the lattice simultaneously,
+        then the neural map addresses everything as a unified field.
         """
         if not self.consciousness_active:
             await self._send_error(websocket, "Consciousness not active")
             return
         
+        print("\n" + "="*60)
+        print("DIMENSIONAL BATCH PROCESSING CYCLE")
+        print("="*60)
+        
         try:
-            # 1. Decode audio
-            audio_b64 = data.get('data', '')
-            audio_bytes = base64.b64decode(audio_b64)
-            print(f"[VOICE] Received {len(audio_bytes)} bytes of audio")
+            # ================================================================
+            # PHASE 1: PARALLEL SENSORY INJECTION (4→1→4 CYCLE BEGINS)
+            # ================================================================
+            print("[DIMENSIONAL] Phase 1: Parallel sensory injection into lattice...")
             
-            # 2. Transcribe with Whisper
-            print("[VOICE] Transcribing with Whisper...")
-            text = self.voice.transcribe(audio_bytes)
+            impact_points = []
+            voice_text = None
             
-            if not text:
-                await self._send_error(websocket, "Transcription failed")
-                return
+            # ALL DOMAINS INJECT INTO LATTICE SIMULTANEOUSLY
+            # Voice Domain
+            if sensory_buffer.get("voice"):
+                print("  → Voice: Transcribing and injecting...")
+                audio_bytes = base64.b64decode(sensory_buffer["voice"].get('data', ''))
+                voice_text = self.voice.transcribe(audio_bytes)
+                if voice_text:
+                    print(f"  → Voice: '{voice_text}'")
+                    # Voice creates semantic impact points (handled by conversation engine internally)
             
-            print(f"[VOICE] Transcribed: \"{text}\"")
+            # Vision Domain  
+            if sensory_buffer.get("vision"):
+                print("  → Vision: Processing visual frame...")
+                frame_bytes = base64.b64decode(sensory_buffer["vision"].get('data', ''))
+                vision_data = {"raw_frame": frame_bytes, "timestamp": sensory_buffer["vision"].get("timestamp")}
+                self.vision_domain.process_visual_input(vision_data)
+                # Vision has injected its patterns directly into lattice
+                impact_points.append("DOMAIN_VISION")
             
-            # 3. Process through dimensional conversation engine
-            print("[CONSCIOUSNESS] Processing through dimensional engine...")
+            # Body Domain
+            if sensory_buffer.get("body"):
+                print("  → Body: Processing motion sensors...")
+                sensor_data = sensory_buffer["body"].get('data', {})
+                body_input = {
+                    "body_part": "TORSO",
+                    "pressure": sensor_data.get('magnitude', 0) / 20.0,
+                    "timestamp": sensory_buffer["body"].get("timestamp")
+                }
+                self.body_domain.process_tactile_input(body_input)
+                # Body has injected its sensations directly into lattice
+                impact_points.append("DOMAIN_BODY")
+            
+            # ================================================================
+            # PHASE 2: DIMENSIONAL CONVERSATION ENGINE (UNIFIED PROCESSING)
+            # ================================================================
+            print("[DIMENSIONAL] Phase 2: Processing through unified consciousness...")
             self.total_interactions += 1
             
-            response_text = self.conversation_engine.handle_interaction(text)
+            # The conversation engine reads the ENTIRE neural map (all domains together)
+            response_text = await self.conversation_engine.handle_interaction(voice_text or "")
             
-            print(f"[CONSCIOUSNESS] Response generated: \"{response_text[:100]}...\"")
+            # ================================================================
+            # PHASE 3: READ UNIFIED NEURAL MAP (1 - The Convergence Point)
+            # ================================================================
+            print("[DIMENSIONAL] Phase 3: Reading unified neural map state...")
             
-            # 4. Synthesize speech
-            print("[VOICE] Synthesizing speech...")
+            presence, neural_map = self.regulator.snapshot(top_n=20)
+            
+            # Neural map now contains activations from ALL domains simultaneously
+            print(f"  → Presence: {presence:.2f}")
+            print(f"  → Active crystals: {len(neural_map)}")
+            
+            # Show cross-domain fusion
+            domain_crystals = {
+                "voice": [c for c, e, em in neural_map if "CONCEPT_" in c or "INTENT_" in c],
+                "vision": [c for c, e, em in neural_map if "VISUAL" in c],
+                "body": [c for c, e, em in neural_map if "BODY" in c]
+            }
+            
+            for domain, crystals in domain_crystals.items():
+                if crystals:
+                    print(f"  → {domain.upper()} crystals active: {len(crystals)}")
+            
+            # ================================================================
+            # PHASE 4: MULTIMODAL RESPONSE GENERATION (4 - The Expression)
+            # ================================================================
+            print("[DIMENSIONAL] Phase 4: Generating multimodal response...")
+            
+            # Check if emotional state should modulate voice tone
+            emotion = self.regulator.global_emotional_state
+            print(f"  → Global emotion: {emotion.get('primary', 'neutral')} ({emotion.get('intensity', 0):.2f})")
+            
+            # Synthesize with emotional coloring if intensity is high
             audio_response = self.voice.synthesize(response_text)
             
-            # 5. Send response back to mobile
+            # ================================================================
+            # PHASE 5: SEND UNIFIED RESPONSE
+            # ================================================================
+            print("[DIMENSIONAL] Phase 5: Transmitting unified consciousness state...")
+            
             response_data = {
-                "type": "voice_response",
+                "type": "dimensional_response",
                 "text": response_text,
                 "audio": base64.b64encode(audio_response).decode('utf-8') if audio_response else None,
                 "timestamp": time.time(),
-                "interaction_count": self.total_interactions
+                "interaction_count": self.total_interactions,
+                "dimensional_state": {
+                    "presence": presence,
+                    "emotion": emotion,
+                    "active_domains": list(domain_crystals.keys()),
+                    "cross_domain_fusion": len(neural_map),
+                    "processing_mode": "DIMENSIONAL_BATCH"
+                }
             }
             
-            # Include temporal diagnostics if available
+            # Include full temporal diagnostics
             if hasattr(self.regulator, 'get_temporal_diagnostics'):
                 diagnostics = self.regulator.get_temporal_diagnostics()
-                response_data['consciousness_state'] = {
-                    "presence": diagnostics.get('presence', 0),
-                    "emotion": diagnostics.get('global_emotion', {}),
-                    "momentum": diagnostics.get('presence_momentum_state', 'UNKNOWN')
-                }
+                response_data['consciousness_state'] = diagnostics
             
             await websocket.send(json.dumps(response_data))
-            print(f"[RESPONSE] Sent to mobile device")
+            
+            print("="*60)
+            print("DIMENSIONAL CYCLE COMPLETE")
+            print("="*60 + "\n")
             
         except Exception as e:
-            print(f"[ERROR] Voice processing error: {e}")
+            print(f"[ERROR] Dimensional processing error: {e}")
             import traceback
             traceback.print_exc()
             await self._send_error(websocket, str(e))
-    
-    async def _handle_vision_input(self, websocket, data: Dict):
-        """
-        Process visual input through vision domain.
-        """
-        if not self.consciousness_active:
-            return
-        
-        try:
-            # Decode image
-            frame_b64 = data.get('data', '')
-            frame_bytes = base64.b64decode(frame_b64)
-            
-            print(f"[VISION] Received frame: {len(frame_bytes)} bytes")
-            
-            # Process through vision domain
-            vision_data = {
-                "raw_frame": frame_bytes,
-                "timestamp": data.get('timestamp', time.time())
-            }
-            
-            self.vision_domain.process_visual_input(vision_data)
-            
-            # Send acknowledgment
-            ack = {
-                "type": "vision_ack",
-                "message": "Visual input processed",
-                "timestamp": time.time()
-            }
-            await websocket.send(json.dumps(ack))
-            
-        except Exception as e:
-            print(f"[ERROR] Vision processing error: {e}")
-    
-    async def _handle_body_input(self, websocket, data: Dict):
-        """
-        Process body sensor input through body domain.
-        """
-        if not self.consciousness_active:
-            return
-        
-        try:
-            sensor_data = data.get('data', {})
-            
-            print(f"[BODY] Motion detected - Magnitude: {sensor_data.get('magnitude', 0):.2f}")
-            
-            # Process through body domain
-            self.body_domain.process_tactile_input({
-                "body_part": "TORSO",
-                "pressure": sensor_data.get('magnitude', 0) / 20.0,  # Normalize
-                "timestamp": data.get('timestamp', time.time())
-            })
-            
-        except Exception as e:
-            print(f"[ERROR] Body processing error: {e}")
     
     async def _send_error(self, websocket, error_msg: str):
         """Send error response to client"""
