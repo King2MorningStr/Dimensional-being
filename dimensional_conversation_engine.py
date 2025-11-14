@@ -445,36 +445,36 @@ async def handle_interaction(self, user_input: str) -> str:
 
     # --- STEP 1: SENSE (The 4-Stage NLU) - NOW ASYNC ---
     sem_data, ctx_data, rel_data, int_data = await self.run_dimensional_analysis(user_input)
-        
+    
     # --- STEP 2: FEEL (Lattice Perturbation) ---
-        impact_points = self._determine_impact_points(sem_data, int_data)
-        presence_scale, neural_map = self._dimensional_propagate(impact_points)
-        
-        # [UPGRADE 5] Spontaneous Introspection Check
-        if self.turn_count >= self.next_introspection_turn or presence_scale < 0.4:
-            print("[DCE] ⚡ SPONTANEOUS INTROSPECTION TRIGGERED ⚡")
-            self.next_introspection_turn = self.turn_count + random.randint(5, 15)
-            # Force introspection intent override
-            int_data.deep_intent = "INTROSPECTION"
-            # Re-run feel to energize self-concept slightly
-            self._dimensional_propagate(["CONCEPT_SELF", "INTENT_INTROSPECTION"])
-            # Refresh snapshot
-            presence_scale, neural_map = self.regulator.snapshot(top_n=15)
+    impact_points = self._determine_impact_points(sem_data, int_data)
+    presence_scale, neural_map = self._dimensional_propagate(impact_points)
+    
+    # [UPGRADE 5] Spontaneous Introspection Check
+    if self.turn_count >= self.next_introspection_turn or presence_scale < 0.4:
+        print("[DCE] ⚡ SPONTANEOUS INTROSPECTION TRIGGERED ⚡")
+        self.next_introspection_turn = self.turn_count + random.randint(5, 15)
+        # Force introspection intent override
+        int_data.deep_intent = "INTROSPECTION"
+        # Re-run feel to energize self-concept slightly
+        self._dimensional_propagate(["CONCEPT_SELF", "INTENT_INTROSPECTION"])
+        # Refresh snapshot
+        presence_scale, neural_map = self.regulator.snapshot(top_n=15)
 
-        # --- STEP 3: ACT (Read & Articulate) ---
-        resonant_gambit_name, resonance_emotion = self._find_resonant_gambit(neural_map)
-        self.last_emotion = resonance_emotion # [UPGRADE 6] Save for next turn
-        
-        print(f"[DCE] 3. ACT: Deciphered Action '{resonant_gambit_name}' (Emotion: {resonance_emotion.get('primary')})")
+    # --- STEP 3: ACT (Read & Articulate) ---
+    resonant_gambit_name, resonance_emotion = self._find_resonant_gambit(neural_map)
+    self.last_emotion = resonance_emotion # [UPGRADE 6] Save for next turn
+    
+    print(f"[DCE] 3. ACT: Deciphered Action '{resonant_gambit_name}' (Emotion: {resonance_emotion.get('primary')})")
 
-        response_text = self._articulate_response(resonant_gambit_name, int_data, resonance_emotion, presence_scale, neural_map)
-        
-        # --- STEP 4: STAGE (Buffer the interaction) ---
-        # Instead of logging immediately, we stage it for validation next turn.
-        # [UPGRADE 2 & 4] Stage gambit and raw vector for reinforcement
-        self._stage_interaction(user_input, response_text, neural_map, int_data, resonant_gambit_name, sem_data)
-        
-        return response_text
+    response_text = self._articulate_response(resonant_gambit_name, int_data, resonance_emotion, presence_scale, neural_map)
+    
+    # --- STEP 4: STAGE (Buffer the interaction) ---
+    # Instead of logging immediately, we stage it for validation next turn.
+    # [UPGRADE 2 & 4] Stage gambit and raw vector for reinforcement
+    self._stage_interaction(user_input, response_text, neural_map, int_data, resonant_gambit_name, sem_data)
+    
+    return response_text
 
     # --- 3. NEW REFLECTION HELPER METHODS ---
 
@@ -645,10 +645,10 @@ async def run_dimensional_analysis(self, input_text: str) -> Tuple[SemanticFrame
         return list(impact_points)
 
     def _dimensional_propagate(self, impact_points: List[str]):
-    """
-    DIMENSIONAL INJECTION: All crystals energized in parallel batch.
-    """
-    print(f"[DCE] 2. FEEL: Injecting energy into {len(impact_points)} lattice points...")
+        """
+        DIMENSIONAL INJECTION: All crystals energized in parallel batch.
+        """
+        print(f"[DCE] 2. FEEL: Injecting energy into {len(impact_points)} lattice points...")
     
     # DIMENSIONAL: Collect all target facets first
     target_facets = []
@@ -681,21 +681,7 @@ async def run_dimensional_analysis(self, input_text: str) -> Tuple[SemanticFrame
         self.regulator.step(dt=0.2)
         
     return self.regulator.snapshot(top_n=15)
-        def inject_single(facet_id):
-            self.regulator.inject_energy(facet_id, 1.0)
-        
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            list(executor.map(inject_single, target_facets))
-        
-        # Adaptive resonance steps
-        current_presence = self.regulator.current_presence_scale if hasattr(self.regulator, 'current_presence_scale') else 1.0
-        complexity = len(impact_points)
-        adaptive_steps = max(2, min(15, int(3 + (complexity * current_presence * 1.5))))
-        
-        for i in range(adaptive_steps): 
-            self.regulator.step(dt=0.2)
-            
-    return self.regulator.snapshot(top_n=15)
+
     def _find_resonant_gambit(self, neural_map: List[Tuple[str, float, Dict[str, Any]]]) -> Tuple[str, Dict]:
         """
         This is the ACT step.
