@@ -352,7 +352,7 @@ async def main():
         print("Example: python mobile_sensory_orchestrator.py 192.168.1.100 8765")
         sys.exit(1)
     
-    server_ip = sys.argv[1]
+    server_ip = sys.argv[1].rstrip(':') # Defensively remove trailing colon
     server_port = int(sys.argv[2]) if len(sys.argv) > 2 else 8765
     
     # Request permissions if on Android
