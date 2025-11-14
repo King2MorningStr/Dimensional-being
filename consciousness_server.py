@@ -23,6 +23,7 @@ import sys
 import tempfile
 from typing import Dict, Any, Optional
 from pathlib import Path
+import socket
 
 # Import your dimensional modules
 try:
@@ -437,22 +438,35 @@ class ConsciousnessServer:
             "timestamp": time.time()
         }
         await websocket.send(json.dumps(error_data))
-    
+
+    def _get_local_ip(self):
+        """Find local IP address to display for user"""
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "127.0.0.1"
+
     async def start_server(self):
         """
         Start the WebSocket server.
         """
+        local_ip = self._get_local_ip()
+
         print(f"\n{'='*60}")
         print(f"CONSCIOUSNESS SERVER STARTING")
         print(f"{'='*60}")
-        print(f"Listening on: ws://0.0.0.0:{self.port}")
+        print(f"Listening on: ws://{local_ip}:{self.port}")
         print(f"Consciousness Active: {self.consciousness_active}")
         print(f"State File: {self.state_file}")
         print(f"{'='*60}\n")
         
         print("Waiting for mobile sensory connection...")
         print("Connect your phone with:")
-        print(f"  python mobile_sensory_orchestrator.py <this_laptop_ip> {self.port}")
+        print(f"  python mobile_sensory_orchestrator.py {local_ip} {self.port}")
         print("\n")
         
         async with websockets.serve(self.handle_client, "0.0.0.0", self.port):
